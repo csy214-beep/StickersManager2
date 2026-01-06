@@ -1,0 +1,180 @@
+/* 主窗口基础样式 */
+MainWindow {
+    background-color: #f5f5f7;
+}
+
+/* 滚动区域通用样式 */
+QScrollArea {
+    border: none;
+    background-color: transparent;
+}
+
+QScrollArea QWidget {
+    background-color: transparent;
+}
+
+/* 滚动条样式 - 全局统一 */
+QScrollBar:vertical {
+    width: 8px;
+    background-color: transparent;
+    margin: 0px 2px 0px 2px;
+}
+
+QScrollBar::handle:vertical {
+    background-color: #c0c4cc;
+    border-radius: 4px;
+    min-height: 20px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background-color: #909399;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+QScrollBar:horizontal {
+    height: 8px;
+    background-color: transparent;
+    margin: 2px 0px 2px 0px;
+}
+
+QScrollBar::handle:horizontal {
+    background-color: #c0c4cc;
+    border-radius: 4px;
+    min-width: 20px;
+}
+
+QScrollBar::handle:horizontal:hover {
+    background-color: #909399;
+}
+
+QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+    width: 0px;
+}
+
+/* ========== 新增：CategoryButton 完整样式 ========== */
+CategoryButton {
+    border: none;
+    border-radius: 10px;
+    background-color: #ffffff;
+}
+
+/* 悬浮状态 */
+CategoryButton:hover {
+    background-color: #e8f4f8;
+}
+
+/* 按下/选中状态 */
+CategoryButton:pressed, CategoryButton:selected {
+    background-color: #409eff;
+    color: #ffffff;
+}
+
+/* 禁用状态（可选） */
+CategoryButton:disabled {
+    background-color: #f8f8f8;
+    color: #909399;
+    border-left: 3px solid #e0e0e0;
+}
+
+/* ========== 新增：通用QPushButton样式 ========== */
+QPushButton {
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    background-color: #409eff;
+    color: #ffffff;
+}
+
+/* 悬浮 */
+QPushButton:hover {
+    background-color: #66b1ff;
+}
+
+/* 按下 */
+QPushButton:pressed {
+    background-color: #3399ff;
+}
+
+/* 禁用 */
+QPushButton:disabled {
+    background-color: #c0c4cc;
+    color: #ffffff;
+}
+
+/* 搜索框清除按钮（特殊样式） */
+QPushButton[text="✕"] {
+    border: none;
+    border-radius: 6px;
+    padding: 0;
+    background-color: #f5f5f5;
+    color: white;
+    font-size: 28px;
+    min-width: 30px;
+    min-height: 30px;
+}
+
+QPushButton[text="✕"]:hover {
+    background-color: #e6e6e6;
+    color: white;
+}
+
+QPushButton[text="✕"]:pressed {
+    background-color: #dcdfe6;
+}
+
+/* 搜索区域样式 */
+QLineEdit {
+    border: 1px solid #dcdfe6;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    background-color: #ffffff;
+}
+
+QLineEdit:focus {
+    border-color: #409eff;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+/* 表情单元格样式 */
+StickerCell {
+    border: 1px solid #f0f0f0;
+    border-radius: 8px;
+    background-color: #ffffff;
+}
+
+StickerCell:hover {
+    border-color: #409eff;
+    background-color: #f0f8ff;
+}
+
+StickerCell:selected, StickerCell[highlighted="true"] {
+    border-color: #409eff;
+    background-color: #e8f4f8;
+}
+
+/* 布局间距优化 */
+QVBoxLayout, QHBoxLayout {
+    spacing: 8px;
+}
+
+/* ========== 新增：右键菜单/弹窗按钮样式（可选） ========== */
+QMenu QPushButton {
+    background-color: transparent;
+    color: #333;
+    text-align: left;
+    padding: 6px 12px;
+}
+
+QMenu QPushButton:hover {
+    background-color: #e8f4f8;
+    color: #409eff;
+}
+
+QDialogButtonBox QPushButton {
+    min-width: 80px;
+}

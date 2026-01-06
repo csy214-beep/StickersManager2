@@ -1,0 +1,8 @@
+<RCC>
+  <qresource prefix="/">
+    <file>assets/window.qss</file>
+    <file>assets/st.png</file>
+    <file>assets/menu.qss</file>
+    <file>assets/st.ico</file>
+  </qresource>
+</RCC>
