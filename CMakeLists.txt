@@ -42,7 +42,6 @@ include_directories(
 # 资源文件
 set(RESOURCE_FILES
         resources.qrc
-        thirdparty/QtTheme/QtTheme.qrc
 )
 
 if (NOT CONSOLE)

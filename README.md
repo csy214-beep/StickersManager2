@@ -11,8 +11,6 @@
 
 [![nothings/stb - GitHub](https://gh-card.dev/repos/nothings/stb.svg?fullname=)](https://github.com/nothings/stb)
 
-[![hubenchang0515/QtTheme - GitHub](https://gh-card.dev/repos/hubenchang0515/QtTheme.svg?fullname=)](https://github.com/hubenchang0515/QtTheme)
-
 # 许可证
 
-LICENSE: [AGPL-3.0 license](https://gnu.ac.cn/licenses/agpl-3.0.html)
+LICENSE: [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)

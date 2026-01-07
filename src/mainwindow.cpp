@@ -72,7 +72,7 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::loadStyle() {
-    QString qssFilePath = ":/thirdparty/QtTheme/theme/Flat/Light/LightBlue/Green.qss";
+    QString qssFilePath = ":/assets/window.qss";
     // 打开QSS文件
     QFile file(qssFilePath);
     if (!file.open(QFile::ReadOnly | QFile::Text)) {
