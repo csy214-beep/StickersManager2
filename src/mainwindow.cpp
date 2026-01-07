@@ -20,6 +20,7 @@ MainWindow::MainWindow(ConfigManager *config, QWidget *parent)
       , m_searchTimer(new QTimer(this)) {
     m_thumbnailCache = new ThumbnailCache(m_config->getThumbnailCacheSize(), this);
     m_library = new StickerLibrary(this);
+    setWindowFlag(Qt::WindowStaysOnTopHint);
     // 输入监听器
     listener = new GlobalInputListener();
     // 键盘按键
@@ -33,7 +34,7 @@ MainWindow::MainWindow(ConfigManager *config, QWidget *parent)
             if (isHidden()) {
                 showWindow();
             } else {
-                hideWindow();
+                hide();
             }
         }
     });
@@ -49,7 +50,13 @@ MainWindow::MainWindow(ConfigManager *config, QWidget *parent)
     connect(m_searchTimer, &QTimer::timeout, this, &MainWindow::delayedSearch);
     // 连接托盘图标信号
     connect(TrayIcon::instance()->action_showWin, &QAction::triggered, this, &MainWindow::showWindow);
-    connect(TrayIcon::instance(), &TrayIcon::activated, this, &MainWindow::showWindow);
+    connect(TrayIcon::instance(), &TrayIcon::activated, [&]() {
+        if (isHidden()) {
+            showWindow();
+        } else {
+            hide();
+        }
+    });
     connect(TrayIcon::instance()->action_rescan, &QAction::triggered, this, &MainWindow::loadLibrary);
     // 开始监听
     if (!listener->startListening()) {

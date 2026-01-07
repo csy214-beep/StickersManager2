@@ -31,6 +31,9 @@ public:
 
     QString getHotkey() const;
 
+    int getPort() const;
+
+
     void setHotkey(const QString &hotkey);
 
     QSize getWindowSize() const;
@@ -51,6 +54,7 @@ public:
     bool getCopyOnDoubleClick() const;
 
     int getThumbnailCacheSize() const;
+
 
 signals:
     void configChanged(); // 添加信号声明

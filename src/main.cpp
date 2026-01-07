@@ -4,6 +4,7 @@
 #include "tray.h"
 #include "mainwindow.h"
 #include "configmanager.h"
+#include "checkSingleInstance.hpp"
 
 
 int main(int argc, char *argv[]) {
@@ -17,6 +18,11 @@ int main(int argc, char *argv[]) {
     app.setWindowIcon(QIcon(":/assets/st.png"));
 
     ConfigManager config;
+    PortListener portls;
+    if (!portls.checkSingleInstance(config.getPort())) {
+        exit(0);
+    }
+
     // 主窗口
     MainWindow window(&config);
 

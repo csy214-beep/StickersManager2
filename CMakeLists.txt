@@ -27,6 +27,7 @@ find_package(Qt6 COMPONENTS
         Gui
         Widgets
         Concurrent
+        Network
         REQUIRED)
 FILE(GLOB SOURCE_FILES "./src/*.cpp")
 FILE(GLOB HEADER_FILES "./src/*.h")
@@ -67,6 +68,7 @@ target_link_libraries(StickersManager
         Qt::Gui
         Qt::Widgets
         Qt::Concurrent
+        Qt::Network
 )
 # 设置包含目录
 target_include_directories(${PROJECT_NAME} PRIVATE

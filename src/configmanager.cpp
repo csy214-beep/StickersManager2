@@ -66,6 +66,7 @@ QJsonObject ConfigManager::getDefaultConfig() {
     // 基本设置
     config["libraryPath"] = "";
     config["hotkey"] = "Ctrl+Shift+E";
+    config["port"] = 8868;
 
     // 窗口设置
     QJsonArray windowPos = {900, 50};
@@ -103,6 +104,10 @@ QString ConfigManager::getLibraryPath() const {
 void ConfigManager::setLibraryPath(const QString &path) {
     m_config["libraryPath"] = path;
     emit configChanged();
+}
+
+int ConfigManager::getPort() const {
+    return m_config["port"].toInt();
 }
 
 QString ConfigManager::getHotkey() const {
