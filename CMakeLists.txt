@@ -62,7 +62,7 @@ add_executable(StickersManager
         ${HPP_FILES}
         ${RESOURCE_FILES}
 )
-target_link_libraries(StickersManager
+target_link_libraries(${PROJECT_NAME}
         Qt::Core
         Qt::Gui
         Qt::Widgets
@@ -76,13 +76,27 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 # 设置图标（Windows）
 if (WIN32)
-    set(WIN32_RESOURCES "assets/st.ico")
-    if (EXISTS ${WIN32_RESOURCES})
-        target_sources(StickersManager PRIVATE ${WIN32_RESOURCES})
-        set_target_properties(StickersManager PROPERTIES
-                WIN32_EXECUTABLE TRUE
-                MACOSX_BUNDLE FALSE
-        )
+    # 1. 定义图标文件路径和rc脚本路径
+    set(APP_ICON_FILE "${CMAKE_CURRENT_SOURCE_DIR}/assets/st.ico")
+    set(APP_RC_FILE "${CMAKE_CURRENT_SOURCE_DIR}/assets/icon.rc")
+
+    # 2. 检查图标和rc脚本是否存在
+    if (EXISTS ${APP_ICON_FILE} AND EXISTS ${APP_RC_FILE})
+        # 3. 将rc脚本文件加入项目编译（核心：通过rc脚本绑定图标）
+        target_sources(${PROJECT_NAME} PRIVATE ${APP_RC_FILE})
+
+        # 4. 配合你的CONSOLE开关，设置是否为无控制台的GUI程序（完美联动你的原有逻辑）
+        if (NOT CONSOLE)
+            set_target_properties(${PROJECT_NAME} PROPERTIES
+                    WIN32_EXECUTABLE TRUE  # 无控制台窗口
+            )
+        else ()
+            set_target_properties(${PROJECT_NAME} PROPERTIES
+                    WIN32_EXECUTABLE FALSE # 带控制台窗口
+            )
+        endif ()
+    else ()
+        message(WARNING "Program icon file or RC script is missing, the default icon will be used!")
     endif ()
 endif ()
 
