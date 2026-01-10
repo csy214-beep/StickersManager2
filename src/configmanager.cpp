@@ -65,8 +65,13 @@ QJsonObject ConfigManager::getDefaultConfig() {
 
     // 基本设置
     config["libraryPath"] = "";
-    config["hotkey"] = "Ctrl+Shift+E";
     config["port"] = 8868;
+
+    // 快捷键设置
+    QJsonObject shortcuts;
+    shortcuts["useHotkey"] = true;
+    shortcuts["hotkey"] = "Ctrl+Shift+E";
+    config["shortcuts"] = shortcuts;
 
     // 窗口设置
     QJsonArray windowPos = {900, 50};
@@ -111,7 +116,11 @@ int ConfigManager::getPort() const {
 }
 
 QString ConfigManager::getHotkey() const {
-    return m_config["hotkey"].toString();
+    return m_config["shortcuts"]["hotkey"].toString();
+}
+
+bool ConfigManager::isUseHotkey() const {
+    return m_config["shortcuts"]["useHotkey"].toBool();
 }
 
 void ConfigManager::setHotkey(const QString &hotkey) {

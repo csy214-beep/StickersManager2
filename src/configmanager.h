@@ -33,6 +33,7 @@ public:
 
     int getPort() const;
 
+    bool isUseHotkey() const;
 
     void setHotkey(const QString &hotkey);
 

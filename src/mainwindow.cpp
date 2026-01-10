@@ -50,19 +50,24 @@ MainWindow::MainWindow(ConfigManager *config, QWidget *parent)
     connect(m_searchTimer, &QTimer::timeout, this, &MainWindow::delayedSearch);
     // 连接托盘图标信号
     connect(TrayIcon::instance()->action_showWin, &QAction::triggered, this, &MainWindow::showWindow);
-    connect(TrayIcon::instance(), &TrayIcon::activated, [&]() {
-        if (isHidden()) {
-            showWindow();
-        } else {
-            hide();
+    connect(TrayIcon::instance(), &TrayIcon::activated, [&](QSystemTrayIcon::ActivationReason reason) {
+        // 判断是否为双击动作
+        if (reason == QSystemTrayIcon::DoubleClick) {
+            if (isHidden()) {
+                showWindow();
+            } else {
+                hide();
+            }
         }
     });
     connect(TrayIcon::instance()->action_rescan, &QAction::triggered, this, &MainWindow::loadLibrary);
     // 开始监听
-    if (!listener->startListening()) {
-        qCritical() << "Failed to start global input listening";
-    } else {
-        qDebug() << "Global input listener is running. ";
+    if (m_config->isUseHotkey()) {
+        if (!listener->startListening()) {
+            qCritical() << "Failed to start global input listening";
+        } else {
+            qDebug() << "Global input listener is running. ";
+        }
     }
 }
 
