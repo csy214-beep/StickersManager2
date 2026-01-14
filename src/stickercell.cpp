@@ -92,7 +92,7 @@ void StickerCell::mouseDoubleClickEvent(QMouseEvent *event) {
 
     if (!file.exists()) {
         qWarning() << "文件不存在:" << m_filePath;
-        TrayIcon::showMessage("Warning", "文件不存在:" + m_filePath);
+        TrayIcon::showMessage("Warning", "File not found:" + m_filePath);
         return;
     }
     QClipboard *clipboard = QApplication::clipboard();
@@ -106,7 +106,7 @@ void StickerCell::mouseDoubleClickEvent(QMouseEvent *event) {
 
         clipboard->setMimeData(mimeData);
         qDebug() << "已复制文件到剪贴板:" << m_filePath;
-        TrayIcon::showMessage("Info", "已复制文件到剪贴板:" + m_filePath);
+        TrayIcon::showMessage("Info", "File copied to clipboard:" + m_filePath);
     }
 
     // 仍然发射双击信号（如果其他地方需要）

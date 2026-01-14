@@ -45,17 +45,17 @@ TrayIcon::TrayIcon(QObject *parent)
         setIcon(icon);
     }
 
-    setToolTip("StickersManager");
+    setToolTip("Stickers Manager");
 
     // 创建右键菜单
     menu = new CustomMenu();
 
-    action_showWin = new QAction("窗口", this);
-    action_settings = new QAction("设置", this);
-    action_openRepo = new QAction("图片仓库", this);
-    action_rescan = new QAction("重新加载", this);
-    QAction *action_openPath = new QAction("程序目录", this);
-    QAction *exitAction = new QAction("退出", this);
+    action_showWin = new QAction("Show", this);
+    action_settings = new QAction("Settings", this);
+    action_openRepo = new QAction("Pictures", this);
+    action_rescan = new QAction("Rescan", this);
+    QAction *action_openPath = new QAction("Open App Dir", this);
+    QAction *exitAction = new QAction("Exit", this);
 
     // 连接信号和槽（保持原有连接不变）
     connect(exitAction, &QAction::triggered, []() {

@@ -27,14 +27,14 @@ public:
 
         if (singleInstanceSocket.waitForConnected(100)) {
             QMessageBox::warning(nullptr, "Warning",
-                                 "端口 " + QString::number(port) +
-                                 " 正在使用，可能已经有实例在运行，或者请更改端口。");
+                                 "port " + QString::number(port) +
+                                 " is already in use by another instance of this program.");
             return false;
         }
         m_server = new QTcpServer(this);
         if (!m_server->listen(QHostAddress::LocalHost, port)) {
             QMessageBox::critical(nullptr, "Error",
-                                  "无法监听端口 " + QString::number(port));
+                                  "Failed to listen on port " + QString::number(port));
             delete m_server;
             m_server = nullptr;
             return false;

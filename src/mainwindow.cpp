@@ -98,7 +98,7 @@ void MainWindow::loadStyle() {
 
 void MainWindow::initUI() {
     // (保持你原来的代码)
-    setWindowTitle("表情包管理器");
+    setWindowTitle("Stickers Manager");
     QSize windowSize = m_config->getWindowSize();
     QPoint windowPos = m_config->getWindowPosition();
     setGeometry(windowPos.x(), windowPos.y(), windowSize.width(), windowSize.height());
@@ -143,10 +143,10 @@ QWidget *MainWindow::createStickerPanel() {
     QWidget *searchWidget = new QWidget();
     QHBoxLayout *searchLayout = new QHBoxLayout(searchWidget);
     m_searchInput = new QLineEdit();
-    m_searchInput->setPlaceholderText("搜索表情...");
+    m_searchInput->setPlaceholderText("Search...");
     connect(m_searchInput, &QLineEdit::textChanged, this, &MainWindow::onSearchTextChanged);
     QPushButton *clearButton = new QPushButton("✕");
-    clearButton->setToolTip("清空");
+    clearButton->setToolTip("Clear");
     clearButton->setFixedWidth(30);
     connect(clearButton, &QPushButton::clicked, m_searchInput, &QLineEdit::clear);
     searchLayout->addWidget(m_searchInput);
@@ -170,7 +170,7 @@ void MainWindow::loadLibrary() {
     // (保持你原来的代码)
     QString libraryPath = m_config->getLibraryPath();
     if (libraryPath.isEmpty() || !QDir(libraryPath).exists()) {
-        libraryPath = QFileDialog::getExistingDirectory(this, "选择表情库目录", QDir::homePath());
+        libraryPath = QFileDialog::getExistingDirectory(this, "Select Stickers Library", QDir::homePath());
         if (libraryPath.isEmpty()) return;
         m_config->setLibraryPath(libraryPath);
         m_config->saveConfig();
