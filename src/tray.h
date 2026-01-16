@@ -15,39 +15,41 @@
 #include <QAction>
 
 class TrayIcon : public QSystemTrayIcon {
-	Q_OBJECT
+    Q_OBJECT
 
 public:
-	// 删除拷贝构造函数和赋值运算符
-	TrayIcon(const TrayIcon &) = delete;
+    QString Version = "ver20260116.5";
 
-	TrayIcon &operator=(const TrayIcon &) = delete;
+    // 删除拷贝构造函数和赋值运算符
+    TrayIcon(const TrayIcon &) = delete;
 
-	// 获取单例实例
-	static TrayIcon *instance();
+    TrayIcon &operator=(const TrayIcon &) = delete;
 
-	// 静态方法用于显示消息
-	static void showMessage(const QString &title, const QString &msg,
-	                        QSystemTrayIcon::MessageIcon icon = QSystemTrayIcon::Information,
-	                        int timeout = 10000);
+    // 获取单例实例
+    static TrayIcon *instance();
 
-	QAction *action_showWin;
-	QAction *action_settings;
-	QAction *action_openRepo;
-	QAction *action_rescan;
+    // 静态方法用于显示消息
+    static void showMessage(const QString &title, const QString &msg,
+                            QSystemTrayIcon::MessageIcon icon = QSystemTrayIcon::Information,
+                            int timeout = 10000);
+
+    QAction *action_showWin;
+    QAction *action_settings;
+    QAction *action_openRepo;
+    QAction *action_rescan;
 
 private:
-	TrayIcon(QObject *parent = nullptr);
+    TrayIcon(QObject *parent = nullptr);
 
-	~TrayIcon();
+    ~TrayIcon();
 
-	void switchText(QAction *action);
+    void switchText(QAction *action);
 
-	// 单例实例指针
-	static TrayIcon *m_instance;
+    // 单例实例指针
+    static TrayIcon *m_instance;
 
-	QMenu *menu;
-	bool m_silentMode = false;
+    QMenu *menu;
+    bool m_silentMode = false;
 };
 
 #endif // TRAY_H

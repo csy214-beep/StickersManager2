@@ -15,6 +15,7 @@
 #include <QFile>
 #include "launcher.hpp"
 #include "custommenu.h"
+
 // 初始化静态成员变量
 TrayIcon *TrayIcon::m_instance = nullptr;
 
@@ -45,7 +46,7 @@ TrayIcon::TrayIcon(QObject *parent)
         setIcon(icon);
     }
 
-    setToolTip("Stickers Manager");
+    setToolTip("Stickers Manager " + Version);
 
     // 创建右键菜单
     menu = new CustomMenu();

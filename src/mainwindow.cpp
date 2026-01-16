@@ -11,6 +11,7 @@
 #include <QPushButton>
 #include  "tray.h"
 #include  "convertcodetostring.hpp"
+#include <QMimeData>
 
 MainWindow::MainWindow(ConfigManager *config, QWidget *parent)
     : QMainWindow(parent)
@@ -97,8 +98,7 @@ void MainWindow::loadStyle() {
 }
 
 void MainWindow::initUI() {
-    // (保持你原来的代码)
-    setWindowTitle("Stickers Manager");
+    setWindowTitle("Stickers Manager " + TrayIcon::instance()->Version);
     QSize windowSize = m_config->getWindowSize();
     QPoint windowPos = m_config->getWindowPosition();
     setGeometry(windowPos.x(), windowPos.y(), windowSize.width(), windowSize.height());
@@ -320,9 +320,8 @@ void MainWindow::handleThumbnailLoaded(const QString &filePath, const QPixmap &p
 
 void MainWindow::copyToClipboard(const QString &filePath) {
     QMimeData *mimeData = new QMimeData();
-    QList<QUrl> urls;
-    urls.append(QUrl::fromLocalFile(filePath));
-    mimeData->setUrls(urls);
+    QUrl file_url = QUrl::fromLocalFile(filePath);
+    mimeData->setUrls({file_url});
     mimeData->setText(filePath);
     QApplication::clipboard()->setMimeData(mimeData);
     hideWindow();
