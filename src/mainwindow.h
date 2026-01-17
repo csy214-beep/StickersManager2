@@ -31,8 +31,6 @@ public:
 
     void showWindow();
 
-    void hideWindow();
-
 public slots:
     void reloadLibrary();
 
@@ -72,11 +70,6 @@ private:
     void showCategory(const QString &categoryName);
 
     void displayStickers(const QVector<QString> &stickers);
-
-    // 获取缓存或触发异步加载
-    void requestThumbnail(const QString &filePath, int size, bool isCategory);
-
-    void copyToClipboard(const QString &filePath);
 
     ConfigManager *m_config;
     StickerLibrary *m_library;

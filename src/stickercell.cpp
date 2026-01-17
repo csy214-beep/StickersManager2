@@ -11,6 +11,8 @@
 #include <QFileInfo>
 #include <QClipboard>
 #include <QMimeData>
+#include <QTimer>
+#include  <QMimeData>
 #include  "tray.h"
 
 StickerCell::StickerCell(const QString &filePath, int cellSize, QWidget *parent)
@@ -87,29 +89,66 @@ void StickerCell::mousePressEvent(QMouseEvent *event) {
 void StickerCell::mouseDoubleClickEvent(QMouseEvent *event) {
     Q_UNUSED(event);
 
-    // 双击复制文件到剪贴板
-    QFile file(m_filePath);
-
-    if (!file.exists()) {
+    // 1. 验证文件存在
+    if (!QFile::exists(m_filePath)) {
         qWarning() << "文件不存在:" << m_filePath;
-        TrayIcon::showMessage("Warning", "File not found:" + m_filePath);
+        TrayIcon::showMessage("Warning", "File not found: " + m_filePath);
         return;
     }
-    QClipboard *clipboard = QApplication::clipboard();
-    if (clipboard) {
-        // 创建MIME数据，支持文件粘贴操作
-        QMimeData *mimeData = new QMimeData();
-        QList<QUrl> urls;
-        urls.append(QUrl::fromLocalFile(m_filePath));
-        mimeData->setUrls(urls);
-        mimeData->setText(m_filePath); // 文本格式作为备份
 
-        clipboard->setMimeData(mimeData);
-        qDebug() << "已复制文件到剪贴板:" << m_filePath;
-        TrayIcon::showMessage("Info", "File copied to clipboard:" + m_filePath);
+    // 2. 检查文件是否可读
+    QFileInfo fileInfo(m_filePath);
+    if (!fileInfo.isReadable()) {
+        qWarning() << "文件不可读:" << m_filePath;
+        TrayIcon::showMessage("Warning", "File not accessible: " + m_filePath);
+        return;
     }
 
-    // 仍然发射双击信号（如果其他地方需要）
+    // 3. 获取剪贴板
+    QClipboard *clipboard = QApplication::clipboard();
+    if (!clipboard) {
+        qWarning() << "无法获取剪贴板";
+        return;
+    }
+
+    // 4. 清理剪贴板内容（可选，防止冲突）
+    clipboard->clear();
+
+    // 5. 创建MIME数据
+    QMimeData *mimeData = new QMimeData();
+
+    // 设置文件URL（支持文件拖拽/粘贴）
+    QList<QUrl> urls;
+    urls.append(QUrl::fromLocalFile(m_filePath));
+    mimeData->setUrls(urls);
+    // 设置文本（作为备份）
+    mimeData->setText(m_filePath);
+
+    // 6. 设置剪贴板数据 - 使用QApplication::clipboard()而不是局部变量
+    QApplication::clipboard()->setMimeData(mimeData);
+
+    // 7. 强制同步剪贴板（Windows可能需要）
+#ifdef Q_OS_WINDOWS
+    QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+#endif
+
+    // 8. 验证复制是否成功
+    QTimer::singleShot(50, this, [this]() {
+        const QMimeData *clipboardData = QApplication::clipboard()->mimeData();
+        if (clipboardData && clipboardData->hasUrls()) {
+            QString firstUrl = clipboardData->urls().first().toLocalFile();
+            if (QFileInfo(firstUrl).canonicalFilePath() == QFileInfo(m_filePath).canonicalFilePath()) {
+                qDebug() << "成功复制文件到剪贴板:" << m_filePath;
+                TrayIcon::showMessage("Info", "File copied to clipboard: " + QFileInfo(m_filePath).fileName());
+            } else {
+                qWarning() << "剪贴板内容不匹配";
+            }
+        } else {
+            qWarning() << "剪贴板未包含文件URL";
+        }
+    });
+
+    // 9. 发射双击信号
     emit doubleClicked(m_filePath);
 }
 

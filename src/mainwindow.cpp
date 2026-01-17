@@ -21,7 +21,6 @@ MainWindow::MainWindow(ConfigManager *config, QWidget *parent)
       , m_searchTimer(new QTimer(this)) {
     m_thumbnailCache = new ThumbnailCache(m_config->getThumbnailCacheSize(), this);
     m_library = new StickerLibrary(this);
-    setWindowFlag(Qt::WindowStaysOnTopHint);
     // 输入监听器
     listener = new GlobalInputListener();
     // 键盘按键
@@ -102,7 +101,7 @@ void MainWindow::initUI() {
     QSize windowSize = m_config->getWindowSize();
     QPoint windowPos = m_config->getWindowPosition();
     setGeometry(windowPos.x(), windowPos.y(), windowSize.width(), windowSize.height());
-    setWindowFlags(Qt::Window);
+    setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
 
     QWidget *centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
@@ -116,7 +115,7 @@ void MainWindow::initUI() {
     mainLayout->addWidget(rightPanel, 3);
 
     QShortcut *escShortcut = new QShortcut(QKeySequence(Qt::Key_Escape), this);
-    connect(escShortcut, &QShortcut::activated, this, &MainWindow::hideWindow);
+    connect(escShortcut, &QShortcut::activated, this, &MainWindow::hide);
 }
 
 QWidget *MainWindow::createCategoryPanel() {
@@ -318,15 +317,6 @@ void MainWindow::handleThumbnailLoaded(const QString &filePath, const QPixmap &p
     }
 }
 
-void MainWindow::copyToClipboard(const QString &filePath) {
-    QMimeData *mimeData = new QMimeData();
-    QUrl file_url = QUrl::fromLocalFile(filePath);
-    mimeData->setUrls({file_url});
-    mimeData->setText(filePath);
-    QApplication::clipboard()->setMimeData(mimeData);
-    hideWindow();
-}
-
 void MainWindow::showWindow() {
     if (isHidden()) {
         show();
@@ -335,14 +325,11 @@ void MainWindow::showWindow() {
     }
 }
 
-void MainWindow::hideWindow() {
-    hide();
-}
 
 void MainWindow::closeEvent(QCloseEvent *event) {
     if (event) {
         event->ignore();
-        hideWindow();
+        hide();
     }
 }
 
@@ -389,7 +376,7 @@ void MainWindow::onStickerClicked(const QString &filePath) {
 }
 
 void MainWindow::onStickerDoubleClicked(const QString &filePath) {
-    copyToClipboard(filePath);
+    hide();
 }
 
 void MainWindow::delayedSearch() {
