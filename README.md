@@ -6,7 +6,7 @@ StickersManager
     <img src="https://img.shields.io/badge/language-C%2B%2B20-blue?logo=c%2B%2B" alt="Language">
     <img src="https://img.shields.io/badge/framework-Qt%206.10.1-brightgreen?logo=qt" alt="Qt">
     <img src="https://img.shields.io/badge/platform-Windows-blue?logo=windows" alt="Windows">
-    <img src="https://img.shields.io/badge/license-CC%20BY--NC%204.0-lightgrey?logo=creativecommons)" alt="License">
+    <img src="https://img.shields.io/badge/license-CC%20BY--NC%204.0-lightgrey?logo=creativecommons" alt="License">
     <img src="https://img.shields.io/github/stars/csy214-beep/StickersManager2?style=social" alt="Stars">
 </p>
 
@@ -19,7 +19,7 @@ Refer to [EweSticker](https://github.com/FredHappyface/Android.EweSticker) to im
 
 # Preview
 
-![](GitHub/preview.mp4)
+![alt text](GitHub/image.png)
 
 # Features
 
@@ -33,8 +33,12 @@ Refer to [EweSticker](https://github.com/FredHappyface/Android.EweSticker) to im
 
 [Qt6.10.1](https://www.qt.io/)
 
-[![nothings/stb - GitHub](https://gh-card.dev/repos/nothings/stb.svg?fullname=)](https://github.com/nothings/stb)
+[nothings/stb](https://github.com/nothings/stb)
+
+# Related Resources
+
+Sticker pack library that seamlessly integrates with the software in this repository: [csy214-beep/EMO](https://github.com/csy214-beep/EMO)
 
 # License
 
-LICENSE: [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)
+[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)
