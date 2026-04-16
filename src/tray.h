@@ -19,7 +19,7 @@ class TrayIcon : public QSystemTrayIcon {
     Q_OBJECT
 
 public:
-    QString Version = "ver20260116.5";
+    QString Version = "ver20260416.6";
 
     // 删除拷贝构造函数和赋值运算符
     TrayIcon(const TrayIcon &) = delete;

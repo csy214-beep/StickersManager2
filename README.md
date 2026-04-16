@@ -74,6 +74,8 @@ Sticker pack library that seamlessly integrates with this software: [csy214-beep
 
 > [!NOTE]
 > We will not provide the stickers used to develop this software.
+>
+> Please configure with the software completely closed.
 
 ## License
 
