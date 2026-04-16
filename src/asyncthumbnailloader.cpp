@@ -95,14 +95,15 @@ void AsyncThumbnailLoader::LoadTask::run() {
     }
 
     // 使用信号槽机制将结果传回主线程
-    // 使用直接调用信号的方式，避免 invokeMethod 的问题
     AsyncThumbnailLoader *loader = qobject_cast<AsyncThumbnailLoader *>(m_receiver);
     if (loader) {
         // 使用 QueuedConnection 确保在主线程处理
-        QMetaObject::invokeMethod(loader, [loader, m_filePath = this->m_filePath, image]() {
-            QPixmap pixmap = QPixmap::fromImage(image);
-            loader->handleThumbnailLoaded(m_filePath, pixmap);
-        }, Qt::QueuedConnection);
+        QString filePathCopy = m_filePath;
+        QImage imageCopy = image;
+        QMetaObject::invokeMethod(loader, [loader, filePathCopy, imageCopy]()
+                                  {
+            QPixmap pixmap = QPixmap::fromImage(imageCopy);
+            loader->handleThumbnailLoaded(filePathCopy, pixmap); }, Qt::QueuedConnection);
     } else {
         qWarning() << "无法将接收者转换为 AsyncThumbnailLoader:" << m_filePath;
     }

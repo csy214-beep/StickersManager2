@@ -19,9 +19,6 @@ QString keyCodeToKeyString(int keyCode);
 
 QString modifiersToString(ModifierKeys modifiers);
 
-QString mouseCodeToString(MouseButton &button);
-
-
 class ShortcutCompare {
 public:
  /**

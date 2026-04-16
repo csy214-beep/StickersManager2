@@ -29,6 +29,8 @@ signals:
 
     void doubleClicked(const QString &filePath);
 
+    void rightClicked(const QString &filePath);
+
 protected:
     void mousePressEvent(QMouseEvent *event) override;
 

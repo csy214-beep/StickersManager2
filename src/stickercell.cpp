@@ -53,8 +53,15 @@ void StickerCell::setThumbnail(const QPixmap &pixmap) {
     m_currentPixmap = pixmap;
     m_hasRealThumbnail = true;
 
-    // 直接设置到标签，让Qt处理缩放
-    m_imageLabel->setPixmap(pixmap);
+    // 缩放图像以适应标签，保持宽高比
+    QSize labelSize = m_imageLabel->size();
+    QPixmap scaledPixmap = pixmap.scaled(
+        labelSize,
+        Qt::KeepAspectRatio,
+        Qt::SmoothTransformation
+    );
+
+    m_imageLabel->setPixmap(scaledPixmap);
 
     // 强制更新显示
     m_imageLabel->update();
@@ -79,15 +86,26 @@ void StickerCell::clearHighlight() {
 }
 
 void StickerCell::mousePressEvent(QMouseEvent *event) {
-    Q_UNUSED(event);
-    // 单击高亮
+    // 无论是左键还是右键，都先设置高亮
     m_isHighlighted = true;
     setStyleSheet("QFrame { background-color: #e3f2fd; border: 2px solid #2196f3; }");
-    emit clicked(m_filePath);
+    
+    if (event->button() == Qt::RightButton)
+    {
+        emit rightClicked(m_filePath);
+    }
+    else
+    {
+        emit clicked(m_filePath);
+    }
 }
 
 void StickerCell::mouseDoubleClickEvent(QMouseEvent *event) {
-    Q_UNUSED(event);
+    // 右键双击不算双击，不执行复制和关闭窗口
+    if (event->button() == Qt::RightButton)
+    {
+        return;
+    }
 
     // 1. 验证文件存在
     if (!QFile::exists(m_filePath)) {
@@ -157,6 +175,12 @@ void StickerCell::resizeEvent(QResizeEvent *event) {
 
     // 如果有真实缩略图，重新设置一次以确保正确显示
     if (m_hasRealThumbnail && !m_currentPixmap.isNull()) {
-        m_imageLabel->setPixmap(m_currentPixmap);
+        QSize labelSize = m_imageLabel->size();
+        QPixmap scaledPixmap = m_currentPixmap.scaled(
+            labelSize,
+            Qt::KeepAspectRatio,
+            Qt::SmoothTransformation
+        );
+        m_imageLabel->setPixmap(scaledPixmap);
     }
 }

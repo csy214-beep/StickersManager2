@@ -21,25 +21,15 @@ MainWindow::MainWindow(ConfigManager *config, QWidget *parent)
       , m_searchTimer(new QTimer(this)) {
     m_thumbnailCache = new ThumbnailCache(m_config->getThumbnailCacheSize(), this);
     m_library = new StickerLibrary(this);
-    // 输入监听器
-    listener = new GlobalInputListener();
-    // 键盘按键
-    connect(listener, &GlobalInputListener::keyReleased, [&](int keyCode, ModifierKeys modifiers) {
-        QString keyName = keyCodeToKeyString(keyCode);
-        QString modifiersName = modifiersToString(modifiers);
-        QString hotkey = modifiersName + "+" + keyName;
-        if (!modifiers)hotkey = keyName;
-        // 自定义全局快捷键窗口显示
-        if (ShortcutCompare::compareShortcutKeys(hotkey, m_config->getHotkey())) {
-            if (isHidden()) {
-                showWindow();
-            } else {
-                hide();
-            }
-        }
-    });
 
-    // 连接缩略图信号
+    // 使用默认仓库配置
+    auto libs = config->getLibraries();
+    if (!libs.isEmpty()) {
+        m_libConfig = libs.first();
+    } else {
+        m_libConfig = LibraryConfig(config->getLibraryPath(), config->getHotkey());
+    }
+
     connect(m_thumbnailCache, &ThumbnailCache::thumbnailReady,
             this, &MainWindow::onThumbnailLoaded);
 
@@ -48,32 +38,40 @@ MainWindow::MainWindow(ConfigManager *config, QWidget *parent)
     loadStyle();
     m_searchTimer->setSingleShot(true);
     connect(m_searchTimer, &QTimer::timeout, this, &MainWindow::delayedSearch);
-    // 连接托盘图标信号
-    connect(TrayIcon::instance()->action_showWin, &QAction::triggered, this, &MainWindow::showWindow);
-    connect(TrayIcon::instance(), &TrayIcon::activated, [&](QSystemTrayIcon::ActivationReason reason) {
-        // 判断是否为双击动作
-        if (reason == QSystemTrayIcon::DoubleClick) {
-            if (isHidden()) {
-                showWindow();
-            } else {
-                hide();
-            }
-        }
-    });
-    connect(TrayIcon::instance()->action_rescan, &QAction::triggered, this, &MainWindow::loadLibrary);
-    // 开始监听
-    if (m_config->isUseHotkey()) {
-        if (!listener->startListening()) {
-            qCritical() << "Failed to start global input listening";
-        } else {
-            qDebug() << "Global input listener is running. ";
-        }
-    }
 }
 
 MainWindow::~MainWindow() {
     delete m_thumbnailCache;
     delete m_library;
+}
+
+MainWindow::MainWindow(ConfigManager *config, const LibraryConfig &libConfig, QWidget *parent)
+    : QMainWindow(parent), m_config(config), m_library(nullptr), m_thumbnailCache(nullptr),
+      m_searchTimer(new QTimer(this)), m_libConfig(libConfig) {
+    m_thumbnailCache = new ThumbnailCache(m_config->getThumbnailCacheSize(), this);
+    m_library = new StickerLibrary(this);
+
+    connect(m_thumbnailCache, &ThumbnailCache::thumbnailReady,
+            this, &MainWindow::onThumbnailLoaded);
+
+    initUI();
+    loadLibrary();
+    loadStyle();
+    m_searchTimer->setSingleShot(true);
+    connect(m_searchTimer, &QTimer::timeout, this, &MainWindow::delayedSearch);
+}
+
+QString MainWindow::getLibraryPath() const {
+    return m_libConfig.path;
+}
+
+void MainWindow::setLibraryConfig(const LibraryConfig &libConfig) {
+    m_libConfig = libConfig;
+    loadLibrary();
+}
+
+LibraryConfig MainWindow::getLibraryConfig() const {
+    return m_libConfig;
 }
 
 void MainWindow::loadStyle() {
@@ -110,9 +108,9 @@ void MainWindow::initUI() {
     mainLayout->setSpacing(5);
 
     QWidget *leftPanel = createCategoryPanel();
-    mainLayout->addWidget(leftPanel, 1);
+    mainLayout->addWidget(leftPanel, 0);
     QWidget *rightPanel = createStickerPanel();
-    mainLayout->addWidget(rightPanel, 3);
+    mainLayout->addWidget(rightPanel, 1);
 
     QShortcut *escShortcut = new QShortcut(QKeySequence(Qt::Key_Escape), this);
     connect(escShortcut, &QShortcut::activated, this, &MainWindow::hide);
@@ -122,8 +120,14 @@ QWidget *MainWindow::createCategoryPanel() {
     QWidget *panel = new QWidget();
     QVBoxLayout *layout = new QVBoxLayout(panel);
     layout->setContentsMargins(0, 0, 0, 0);
+    int buttonSize = m_config->getCategoryButtonSize();
+    panel->setMaximumWidth(buttonSize + 20);
+    panel->setMinimumWidth(buttonSize + 20);
+
     m_categoryScroll = new QScrollArea();
     m_categoryScroll->setWidgetResizable(true);
+    m_categoryScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_categoryScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     m_categoryContainer = new QWidget();
     m_categoryLayout = new QVBoxLayout(m_categoryContainer);
     m_categoryLayout->setAlignment(Qt::AlignTop);
@@ -154,6 +158,8 @@ QWidget *MainWindow::createStickerPanel() {
 
     m_stickerScroll = new QScrollArea();
     m_stickerScroll->setWidgetResizable(true);
+    m_stickerScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    m_stickerScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     m_stickerContainer = new QWidget();
     m_gridLayout = new QGridLayout(m_stickerContainer);
     m_gridLayout->setSpacing(8);
@@ -166,12 +172,12 @@ QWidget *MainWindow::createStickerPanel() {
 }
 
 void MainWindow::loadLibrary() {
-    // (保持你原来的代码)
-    QString libraryPath = m_config->getLibraryPath();
+    QString libraryPath = m_libConfig.path;
     if (libraryPath.isEmpty() || !QDir(libraryPath).exists()) {
         libraryPath = QFileDialog::getExistingDirectory(this, "Select Stickers Library", QDir::homePath());
         if (libraryPath.isEmpty()) return;
-        m_config->setLibraryPath(libraryPath);
+        m_libConfig.path = libraryPath;
+        m_config->addLibrary(m_libConfig);
         m_config->saveConfig();
     }
     if (m_library->setLibraryPath(libraryPath)) {
@@ -243,7 +249,17 @@ void MainWindow::displayStickers(const QVector<QString> &stickers) {
     m_currentCells.clear();
 
     int cellSize = m_config->getGridCellSize();
-    int columns = m_config->getGridColumns();
+    int minColumns = m_config->getGridColumns();
+    int spacing = m_gridLayout->spacing();
+    int scrollWidth = m_stickerScroll->viewport()->width();
+
+    // 计算合适的列数：先考虑能容纳多少，然后取与配置列数的最大值
+    int calculatedColumns = scrollWidth / (cellSize + spacing);
+    if (calculatedColumns < 1)
+        calculatedColumns = 1;
+    // 使用配置的列数作为最小值，但允许窗口变大时增加列数
+    int columns = qMax(minColumns, calculatedColumns);
+    qDebug() << "配置列数:" << minColumns << ", 实际列数:" << columns;
 
     for (int i = 0; i < stickers.size(); ++i) {
         const QString &stickerPath = stickers[i];
@@ -256,6 +272,7 @@ void MainWindow::displayStickers(const QVector<QString> &stickers) {
         StickerCell *cell = new StickerCell(stickerPath, cellSize);
         connect(cell, &StickerCell::clicked, this, &MainWindow::onStickerClicked);
         connect(cell, &StickerCell::doubleClicked, this, &MainWindow::onStickerDoubleClicked);
+        connect(cell, &StickerCell::rightClicked, this, &MainWindow::onStickerRightClicked);
         cell->setToolTip(fileInfo.fileName());
 
         m_gridLayout->addWidget(cell, row, col);
@@ -319,7 +336,9 @@ void MainWindow::handleThumbnailLoaded(const QString &filePath, const QPixmap &p
 
 void MainWindow::showWindow() {
     if (isHidden()) {
+        update();
         show();
+        recalculateGridColumns();
         raise();
         activateWindow();
     }
@@ -375,10 +394,62 @@ void MainWindow::onStickerClicked(const QString &filePath) {
     }
 }
 
+void MainWindow::onStickerRightClicked(const QString &filePath) {
+    // 右键点击时也要清除其他cell的高亮
+    for (StickerCell *cell: m_currentCells) {
+        if (cell->getFilePath() != filePath) {
+            cell->clearHighlight();
+        }
+    }
+
+    static ImagePreviewDialog *currentPreview = nullptr;
+    if (currentPreview) {
+        currentPreview->accept();
+        currentPreview = nullptr;
+    } else {
+        currentPreview = new ImagePreviewDialog(filePath, this);
+        connect(currentPreview, &ImagePreviewDialog::finished, [&]() { currentPreview = nullptr; });
+        currentPreview->show();
+    }
+}
+
 void MainWindow::onStickerDoubleClicked(const QString &filePath) {
     hide();
 }
 
 void MainWindow::delayedSearch() {
     performSearch();
+}
+
+void MainWindow::resizeEvent(QResizeEvent *event) {
+    QMainWindow::resizeEvent(event);
+    recalculateGridColumns();
+}
+
+void MainWindow::recalculateGridColumns() {
+    if (!m_stickerScroll || !m_gridLayout)
+        return;
+
+    int cellSize = m_config->getGridCellSize();
+    int minColumns = m_config->getGridColumns();
+    int spacing = m_gridLayout->spacing();
+    int scrollWidth = m_stickerScroll->viewport()->width();
+
+    // 计算合适的列数
+    int calculatedColumns = scrollWidth / (cellSize + spacing);
+    if (calculatedColumns < 1)
+        calculatedColumns = 1;
+    int newColumns = qMax(minColumns, calculatedColumns);
+
+    // 保存上一次的列数，避免不必要的重新布局
+    static int lastColumns = 0;
+
+    if (newColumns != lastColumns && !m_currentCategory.isEmpty()) {
+        lastColumns = newColumns;
+        if (m_searchInput->text().isEmpty()) {
+            showCategory(m_currentCategory);
+        } else {
+            performSearch();
+        }
+    }
 }

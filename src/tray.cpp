@@ -51,7 +51,7 @@ TrayIcon::TrayIcon(QObject *parent)
     // 创建右键菜单
     menu = new CustomMenu();
 
-    action_showWin = new QAction("Show", this);
+    showSubMenu = new CustomMenu("Show");
     action_settings = new QAction("Settings", this);
     action_openRepo = new QAction("Pictures", this);
     action_rescan = new QAction("Rescan", this);
@@ -68,9 +68,11 @@ TrayIcon::TrayIcon(QObject *parent)
         launch(appDir);
     });
 
-    menu->addActions({
-        action_showWin, action_rescan, action_settings, action_openPath, action_openRepo,
-    });
+    menu->addMenu(showSubMenu);
+    menu->addAction(action_rescan);
+    menu->addAction(action_settings);
+    menu->addAction(action_openPath);
+    menu->addAction(action_openRepo);
     menu->addSeparator();
     menu->addAction(exitAction);
 
@@ -81,6 +83,26 @@ TrayIcon::TrayIcon(QObject *parent)
     this->show();
 
     qDebug() << "TrayIcon singleton initialized";
+}
+
+void TrayIcon::updateShowMenu(const QVector<LibraryConfig> &libraries) {
+    showSubMenu->clear();
+
+    for (int i = 0; i < libraries.size(); ++i) {
+        const LibraryConfig &lib = libraries[i];
+        if (!lib.enabled)
+            continue;
+
+        QFileInfo dirInfo(lib.path);
+        QString menuText = dirInfo.fileName();
+        if (menuText.isEmpty()) {
+            menuText = lib.path;
+        }
+
+        QAction *action = new QAction(menuText, this);
+        action->setData(lib.path);
+        showSubMenu->addAction(action);
+    }
 }
 
 void TrayIcon::switchText(QAction *action) {

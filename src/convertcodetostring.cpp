@@ -208,29 +208,3 @@ QString modifiersToString(ModifierKeys modifiers) {
 
     return modifierStrings.join("+");
 }
-
-// 鼠标按键码到字符串的转换函数
-QString mouseCodeToString(MouseButton &b) {
-    QString buttonName;
-    switch (b) {
-        case LeftButton:
-            buttonName = "LeftButton";
-            break;
-        case RightButton:
-            buttonName = "RightButton";
-            break;
-        case MiddleButton:
-            buttonName = "MiddleButton";
-            break;
-        case XButton1:
-            buttonName = "XButton1";
-            break;
-        case XButton2:
-            buttonName = "XButton2";
-            break;
-        case NoButton:
-            buttonName = "NoButton";
-            break;
-    }
-    return buttonName;
-}

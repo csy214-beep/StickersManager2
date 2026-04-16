@@ -16,12 +16,20 @@ public:
 
     void setThumbnail(const QPixmap &pixmap);
 
+    void setButtonSize(int size);
+
     QString getCategoryName() const { return m_categoryName; }
 
+protected:
+    void resizeEvent(QResizeEvent *event) override;
+
 private:
+    void updateIcon();
+
     QString m_categoryName;
     QString m_firstStickerPath;
     int m_buttonSize;
+    QPixmap m_currentPixmap;
 };
 
 #endif // CATEGORYBUTTON_H

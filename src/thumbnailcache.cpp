@@ -29,14 +29,13 @@ QPixmap ThumbnailCache::get(const QString &key) {
 }
 
 void ThumbnailCache::loadThumbnailAsync(const QString &imagePath, const QSize &targetSize) {
-    QString cacheKey = getCacheKey(imagePath, targetSize);
-
-    // 先检查缓存
+    // 先检查缓存，直接用文件路径作为键
     QPixmap cached;
     {
         QMutexLocker locker(&m_cacheMutex);
-        if (m_cache.contains(cacheKey)) {
-            cached = *m_cache.object(cacheKey);
+        if (m_cache.contains(imagePath))
+        {
+            cached = *m_cache.object(imagePath);
         }
     }
 
@@ -48,7 +47,7 @@ void ThumbnailCache::loadThumbnailAsync(const QString &imagePath, const QSize &t
     }
 
     // 异步加载
-    qDebug() << "请求异步加载缩略图:" << imagePath << "缓存键:" << cacheKey;
+    qDebug() << "请求异步加载缩略图:" << imagePath;
     m_asyncLoader->loadThumbnail(imagePath, targetSize);
 }
 
@@ -105,9 +104,11 @@ void ThumbnailCache::onAsyncThumbnailLoaded(const QString &filePath, const QPixm
         return;
     }
 
-    // 将图片放入缓存
-    // 注意：这里我们不知道目标尺寸，暂时不缓存
-    // 在实际使用中，应该跟踪请求的尺寸
+    // 将图片放入缓存，使用文件路径作为键
+    {
+        QMutexLocker locker(&m_cacheMutex);
+        m_cache.insert(filePath, new QPixmap(pixmap), pixmap.width() * pixmap.height() * 4);
+    }
 
     qDebug() << "发射缩略图就绪信号:" << filePath;
     emit thumbnailReady(filePath, pixmap);

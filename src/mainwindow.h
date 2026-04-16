@@ -19,7 +19,7 @@
 #include "thumbnailcache.h"
 #include "stickercell.h"
 #include "categorybutton.h"
-#include "globalinputlistener.h"
+#include "imagepreviewdialog.h"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -29,7 +29,15 @@ public:
 
     ~MainWindow();
 
+    explicit MainWindow(ConfigManager *config, const LibraryConfig &libConfig, QWidget *parent = nullptr);
+
     void showWindow();
+
+    QString getLibraryPath() const;
+
+    void setLibraryConfig(const LibraryConfig &libConfig);
+
+    LibraryConfig getLibraryConfig() const;
 
 public slots:
     void reloadLibrary();
@@ -39,6 +47,8 @@ public slots:
 protected:
     void closeEvent(QCloseEvent *event) override;
 
+    void resizeEvent(QResizeEvent *event) override;
+
 private slots:
     void onSearchTextChanged(const QString &text);
 
@@ -47,6 +57,8 @@ private slots:
     void onStickerClicked(const QString &filePath);
 
     void onStickerDoubleClicked(const QString &filePath);
+
+    void onStickerRightClicked(const QString &filePath);
 
     void delayedSearch();
 
@@ -71,9 +83,12 @@ private:
 
     void displayStickers(const QVector<QString> &stickers);
 
+    void recalculateGridColumns();
+
     ConfigManager *m_config;
     StickerLibrary *m_library;
     ThumbnailCache *m_thumbnailCache;
+    LibraryConfig m_libConfig;
 
     QScrollArea *m_categoryScroll;
     QWidget *m_categoryContainer;
@@ -89,12 +104,9 @@ private:
 
     QMap<CategoryButton *, QString> m_categoryButtons;
 
-    // [新增] 用于记录侧边栏按钮的请求：文件路径 -> 按钮指针
     QMap<QString, CategoryButton *> m_pendingCategoryButtons;
 
     QMap<QString, StickerCell *> m_cellMap;
-
-    GlobalInputListener *listener;
 };
 
 #endif // MAINWINDOW_H

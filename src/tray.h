@@ -13,6 +13,7 @@
 #include <QSystemTrayIcon>
 #include <QMenu>
 #include <QAction>
+#include "configmanager.h"
 
 class TrayIcon : public QSystemTrayIcon {
     Q_OBJECT
@@ -33,10 +34,13 @@ public:
                             QSystemTrayIcon::MessageIcon icon = QSystemTrayIcon::Information,
                             int timeout = 10000);
 
-    QAction *action_showWin;
     QAction *action_settings;
     QAction *action_openRepo;
     QAction *action_rescan;
+
+    QMenu *showSubMenu;
+
+    void updateShowMenu(const QVector<LibraryConfig> &libraries);
 
 private:
     TrayIcon(QObject *parent = nullptr);

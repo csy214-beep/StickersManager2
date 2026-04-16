@@ -9,7 +9,6 @@
 
 ConfigManager::ConfigManager(QObject *parent)
     : QObject(parent) {
-    // 确定配置文件路径
     QString exeDir = QCoreApplication::applicationDirPath();
     QDir configDir = QDir(exeDir + "/.stickersmanager");
     QDir().mkpath(configDir.absolutePath());
@@ -18,13 +17,8 @@ ConfigManager::ConfigManager(QObject *parent)
     if (!loadConfig()) {
         qWarning() << "使用默认配置";
     }
-    connect(TrayIcon::instance()->action_settings, &QAction::triggered, [&]() {
-        launch(m_configPath);
-    });
-    connect(TrayIcon::instance()->action_openRepo, &QAction::triggered, [&]() {
-        QString p = m_config["libraryPath"].toString();
-        launch(p);
-    });
+
+    migrateToMultiLibrary();
 }
 
 ConfigManager::~ConfigManager() {
@@ -60,39 +54,95 @@ bool ConfigManager::saveConfig() {
     return true;
 }
 
+void ConfigManager::migrateToMultiLibrary() {
+    if (!m_config.contains("libraries")) {
+        QJsonArray libraries;
+        QString oldPath = m_config["libraryPath"].toString();
+        if (!oldPath.isEmpty()) {
+            QJsonObject libObj;
+            libObj["path"] = oldPath;
+            QJsonObject shortcuts = m_config["shortcuts"].toObject();
+            libObj["hotkey"] = shortcuts["hotkey"].toString("Ctrl+Shift+E");
+            libObj["enabled"] = shortcuts["useHotkey"].toBool(true);
+            libraries.append(libObj);
+        }
+        m_config["libraries"] = libraries;
+        saveConfig();
+    }
+}
+
+QVector<LibraryConfig> ConfigManager::getLibraries() const {
+    QVector<LibraryConfig> result;
+    QJsonArray libArray = m_config["libraries"].toArray();
+    for (const QJsonValue &val: libArray) {
+        QJsonObject obj = val.toObject();
+        LibraryConfig lib;
+        lib.path = obj["path"].toString();
+        lib.hotkey = obj["hotkey"].toString();
+        lib.enabled = obj["enabled"].toBool(true);
+        result.append(lib);
+    }
+    return result;
+}
+
+void ConfigManager::setLibraries(const QVector<LibraryConfig> &libs) {
+    QJsonArray libArray;
+    for (const LibraryConfig &lib: libs) {
+        QJsonObject obj;
+        obj["path"] = lib.path;
+        obj["hotkey"] = lib.hotkey;
+        obj["enabled"] = lib.enabled;
+        libArray.append(obj);
+    }
+    m_config["libraries"] = libArray;
+    emit configChanged();
+}
+
+void ConfigManager::addLibrary(const LibraryConfig &lib) {
+    auto libs = getLibraries();
+    libs.append(lib);
+    setLibraries(libs);
+}
+
+void ConfigManager::removeLibrary(int index) {
+    auto libs = getLibraries();
+    if (index >= 0 && index < libs.size()) {
+        libs.removeAt(index);
+        setLibraries(libs);
+    }
+}
+
 QJsonObject ConfigManager::getDefaultConfig() {
     QJsonObject config;
 
-    // 基本设置
     config["libraryPath"] = "";
     config["port"] = 8868;
 
-    // 快捷键设置
     QJsonObject shortcuts;
     shortcuts["useHotkey"] = true;
     shortcuts["hotkey"] = "Ctrl+Shift+E";
     config["shortcuts"] = shortcuts;
 
-    // 窗口设置
+    QJsonArray libraries;
+    config["libraries"] = libraries;
+
     QJsonArray windowPos = {900, 50};
-    QJsonArray windowSize = {600, 430};
+    QJsonArray windowSize = {540, 430};
     config["windowPosition"] = windowPos;
     config["windowSize"] = windowSize;
 
-    // UI设置
     QJsonObject ui;
     ui["categoryButtonSize"] = 90;
     ui["gridCellSize"] = 120;
     ui["gridColumns"] = 3;
     config["ui"] = ui;
-    // 行为设置
+
     QJsonObject behavior;
     behavior["copyOnDoubleClick"] = true;
     behavior["highlightOnClick"] = true;
     behavior["searchDelayMs"] = 300;
     config["behavior"] = behavior;
 
-    // 性能设置
     QJsonObject performance;
     performance["thumbnailCacheSize"] = 200;
     performance["lazyLoadEnabled"] = true;
@@ -101,31 +151,45 @@ QJsonObject ConfigManager::getDefaultConfig() {
     return config;
 }
 
-// 配置项访问器实现
 QString ConfigManager::getLibraryPath() const {
-    return m_config["libraryPath"].toString();
+    auto libs = getLibraries();
+    return libs.isEmpty() ? "" : libs.first().path;
 }
 
 void ConfigManager::setLibraryPath(const QString &path) {
-    m_config["libraryPath"] = path;
-    emit configChanged();
+    auto libs = getLibraries();
+    if (libs.isEmpty()) {
+        LibraryConfig newLib(path, "Ctrl+Shift+E", true);
+        addLibrary(newLib);
+    } else {
+        libs[0].path = path;
+        setLibraries(libs);
+    }
+}
+
+QString ConfigManager::getHotkey() const {
+    auto libs = getLibraries();
+    return libs.isEmpty() ? "Ctrl+Shift+E" : libs.first().hotkey;
+}
+
+bool ConfigManager::isUseHotkey() const {
+    auto libs = getLibraries();
+    return libs.isEmpty() ? true : libs.first().enabled;
+}
+
+void ConfigManager::setHotkey(const QString &hotkey) {
+    auto libs = getLibraries();
+    if (libs.isEmpty()) {
+        LibraryConfig newLib("", hotkey, true);
+        addLibrary(newLib);
+    } else {
+        libs[0].hotkey = hotkey;
+        setLibraries(libs);
+    }
 }
 
 int ConfigManager::getPort() const {
     return m_config["port"].toInt();
-}
-
-QString ConfigManager::getHotkey() const {
-    return m_config["shortcuts"]["hotkey"].toString();
-}
-
-bool ConfigManager::isUseHotkey() const {
-    return m_config["shortcuts"]["useHotkey"].toBool();
-}
-
-void ConfigManager::setHotkey(const QString &hotkey) {
-    m_config["hotkey"] = hotkey;
-    emit configChanged();
 }
 
 QSize ConfigManager::getWindowSize() const {
@@ -133,7 +197,7 @@ QSize ConfigManager::getWindowSize() const {
     if (sizeArray.size() == 2) {
         return QSize(sizeArray[0].toInt(), sizeArray[1].toInt());
     }
-    return QSize(600, 430);
+    return QSize(540, 430);
 }
 
 void ConfigManager::setWindowSize(const QSize &size) {
@@ -183,4 +247,8 @@ bool ConfigManager::getCopyOnDoubleClick() const {
 int ConfigManager::getThumbnailCacheSize() const {
     QJsonObject performance = m_config["performance"].toObject();
     return performance["thumbnailCacheSize"].toInt(200);
+}
+
+QString ConfigManager::getConfigPath() const {
+    return m_configPath;
 }

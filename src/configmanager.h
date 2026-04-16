@@ -10,6 +10,19 @@
 #include <QFile>
 #include <QDir>
 #include <QStandardPaths>
+#include <QJsonArray>
+#include <QVector>
+
+struct LibraryConfig
+{
+    QString path;
+    QString hotkey;
+    bool enabled;
+
+    LibraryConfig() : enabled(true) {}
+    LibraryConfig(const QString &p, const QString &h, bool e = true)
+        : path(p), hotkey(h), enabled(e) {}
+};
 
 class ConfigManager : public QObject {
     Q_OBJECT
@@ -24,18 +37,20 @@ public:
 
     bool saveConfig();
 
-    // 配置项访问器
+    // 多仓库配置
+    QVector<LibraryConfig> getLibraries() const;
+    void setLibraries(const QVector<LibraryConfig> &libs);
+    void addLibrary(const LibraryConfig &lib);
+    void removeLibrary(int index);
+
+    // 兼容旧版本的单一仓库接口
     QString getLibraryPath() const;
-
     void setLibraryPath(const QString &path);
-
     QString getHotkey() const;
+    bool isUseHotkey() const;
+    void setHotkey(const QString &hotkey);
 
     int getPort() const;
-
-    bool isUseHotkey() const;
-
-    void setHotkey(const QString &hotkey);
 
     QSize getWindowSize() const;
 
@@ -56,6 +71,8 @@ public:
 
     int getThumbnailCacheSize() const;
 
+    QString getConfigPath() const;
+
 
 signals:
     void configChanged(); // 添加信号声明
@@ -65,6 +82,7 @@ private:
     QString m_configPath;
 
     QJsonObject getDefaultConfig();
+    void migrateToMultiLibrary();
 };
 
 #endif // CONFIGMANAGER_H
