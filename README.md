@@ -77,6 +77,55 @@ Sticker pack library that seamlessly integrates with this software: [csy214-beep
 >
 > Please configure with the software completely closed.
 
+## Config
+
+example:
+
+```json
+{
+    "behavior": {
+        "copyOnDoubleClick": true,
+        "highlightOnClick": true,
+        "searchDelayMs": 300
+    },
+    "libraries": [
+        {
+            "enabled": true,
+            "hotkey": "Ctrl+Shift+E",
+            "path": "D:/Users/user/Pictures/EMO/emo"
+        },
+        {
+            "enabled": true,
+            "hotkey": "Ctrl+Shift+A",
+            "path": "D:/Users/user/Pictures/line"
+        }
+    ],
+    "libraryPath": "",
+    "performance": {
+        "lazyLoadEnabled": true,
+        "thumbnailCacheSize": 200
+    },
+    "port": 8868,
+    "shortcuts": {
+        "hotkey": "Ctrl+Shift+E",
+        "useHotkey": true
+    },
+    "ui": {
+        "categoryButtonSize": 90,
+        "gridCellSize": 120,
+        "gridColumns": 3
+    },
+    "windowPosition": [
+        900,
+        50
+    ],
+    "windowSize": [
+        540,
+        430
+    ]
+}
+```
+
 ## License
 
 [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/)
