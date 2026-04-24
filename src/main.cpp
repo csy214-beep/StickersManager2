@@ -14,10 +14,12 @@
 #include "convertcodetostring.hpp"
 #include "launcher.hpp"
 
+#define DEBUG_MODE false
+
 int main(int argc, char *argv[]) {
     initLogFile();
     setLogLevel(LogLevel::Warning);
-    qInstallMessageHandler(messageHandler);
+    if (!DEBUG_MODE) qInstallMessageHandler(messageHandler);
     QApplication app(argc, argv);
     app.setQuitOnLastWindowClosed(false);
     app.setWindowIcon(QIcon(":/assets/st.png"));
@@ -31,17 +33,14 @@ int main(int argc, char *argv[]) {
     // 检查是否是首次启动（没有配置的仓库）
     auto libraries = config.getLibraries();
     bool hasValidLibrary = false;
-    for (const auto &lib : libraries)
-    {
-        if (lib.enabled && !lib.path.isEmpty() && QDir(lib.path).exists())
-        {
+    for (const auto &lib: libraries) {
+        if (lib.enabled && !lib.path.isEmpty() && QDir(lib.path).exists()) {
             hasValidLibrary = true;
             break;
         }
     }
 
-    if (!hasValidLibrary)
-    {
+    if (!hasValidLibrary) {
         // 首次启动，引导用户选择表情库
         QMessageBox::information(nullptr, "欢迎使用 Stickers Manager",
                                  "欢迎使用 Stickers Manager！\n\n"
@@ -51,16 +50,13 @@ int main(int argc, char *argv[]) {
         QString libraryPath = QFileDialog::getExistingDirectory(nullptr,
                                                                 "选择表情库文件夹", QDir::homePath());
 
-        if (!libraryPath.isEmpty())
-        {
+        if (!libraryPath.isEmpty()) {
             // 添加新的表情库配置
             LibraryConfig newLib(libraryPath, "Ctrl+Shift+E", true);
             config.addLibrary(newLib);
             config.saveConfig();
             qDebug() << "首次启动，已添加表情库:" << libraryPath;
-        }
-        else
-        {
+        } else {
             QMessageBox::warning(nullptr, "警告",
                                  "未选择表情库文件夹，程序将退出。");
             exit(0);
@@ -74,8 +70,7 @@ int main(int argc, char *argv[]) {
     QMap<QString, MainWindow *> windows;
 
     // 创建每个仓库创建一个窗口
-    for (const auto &lib : libraries)
-    {
+    for (const auto &lib: libraries) {
         if (!lib.enabled || lib.path.isEmpty())
             continue;
 
@@ -95,8 +90,7 @@ int main(int argc, char *argv[]) {
     TrayIcon::instance()->updateShowMenu(libraries);
 
     // 连接托盘菜单Show子菜单的触发信号
-    QObject::connect(TrayIcon::instance()->showSubMenu, &QMenu::triggered, [&](QAction *action)
-                     {
+    QObject::connect(TrayIcon::instance()->showSubMenu, &QMenu::triggered, [&](QAction *action) {
         QString libraryPath = action->data().toString();
         if (windows.contains(libraryPath)) {
             MainWindow *window = windows[libraryPath];
@@ -105,42 +99,42 @@ int main(int argc, char *argv[]) {
             } else {
                 window->hide();
             }
-        } });
+        }
+    });
 
     // 托盘图标的双击显示第一个仓库窗口
-    if (!windows.isEmpty())
-    {
-        auto firstWindow = windows.first();
-        QObject::connect(TrayIcon::instance(), &TrayIcon::activated, [&](QSystemTrayIcon::ActivationReason reason)
-                         {
+    // 使用 QPointer 自动追踪窗口生命周期
+    QPointer<MainWindow> firstWindow = windows.first();
+
+    QObject::connect(
+        TrayIcon::instance(), &TrayIcon::activated,
+        [&, firstWindow](QSystemTrayIcon::ActivationReason reason) {
+            // 显式捕获 QPointer 副本
             if (reason == QSystemTrayIcon::DoubleClick) {
-                if (firstWindow->isHidden()) {
+                if (!firstWindow) // 窗口已被删除
+                    return;
+                if (firstWindow->isHidden())
                     firstWindow->showWindow();
-                } else {
+                else
                     firstWindow->hide();
-                }
-            } });
-    }
+            }
+        });
 
     // 创建全局热键监听器
     GlobalInputListener *listener = new GlobalInputListener();
 
     // 构建热键到窗口的映射
     QMap<QString, MainWindow *> hotkeyToWindow;
-    for (auto it = windows.begin(); it != windows.end(); ++it)
-    {
+    for (auto it = windows.begin(); it != windows.end(); ++it) {
         LibraryConfig libConfig = it.value()->getLibraryConfig();
-        if (!libConfig.hotkey.isEmpty())
-        {
+        if (!libConfig.hotkey.isEmpty()) {
             hotkeyToWindow[libConfig.hotkey] = it.value();
         }
     }
 
     // 连接热键信号
-    if (!hotkeyToWindow.isEmpty())
-    {
-        QObject::connect(listener, &GlobalInputListener::keyReleased, [&](int keyCode, ModifierKeys modifiers)
-                         {
+    if (!hotkeyToWindow.isEmpty()) {
+        QObject::connect(listener, &GlobalInputListener::keyReleased, [&](int keyCode, ModifierKeys modifiers) {
             QString keyName = keyCodeToKeyString(keyCode);
             QString modifiersName = modifiersToString(modifiers);
             QString hotkey = modifiersName + "+" + keyName;
@@ -156,34 +150,32 @@ int main(int argc, char *argv[]) {
                     }
                     break;
                 }
-            } });
+            }
+        });
 
-        if (!listener->startListening())
-        {
+        if (!listener->startListening()) {
             qCritical() << "Failed to start global input listening";
-        }
-        else
-        {
+        } else {
             qDebug() << "Global input listener is running with" << hotkeyToWindow.size() << "hotkeys";
         }
     }
 
     // 连接Rescan按钮 - 重新扫描所有仓库
-    QObject::connect(TrayIcon::instance()->action_rescan, &QAction::triggered, [&]()
-                     {
+    QObject::connect(TrayIcon::instance()->action_rescan, &QAction::triggered, [&]() {
         for (auto window: windows) {
             window->reloadLibrary();
-        } });
+        }
+    });
 
     // 连接托盘菜单的Settings和Pictures按钮
-    QObject::connect(TrayIcon::instance()->action_settings, &QAction::triggered, [&]()
-                     { launch(config.getConfigPath()); });
-    QObject::connect(TrayIcon::instance()->action_openRepo, &QAction::triggered, [&]()
-                     {
+    QObject::connect(TrayIcon::instance()->action_settings, &QAction::triggered,
+                     [&]() { launch(config.getConfigPath()); });
+    QObject::connect(TrayIcon::instance()->action_openRepo, &QAction::triggered, [&]() {
         auto libs = config.getLibraries();
         if (!libs.isEmpty()) {
             launch(libs.first().path);
-        } });
+        }
+    });
 
     TrayIcon::instance()->show();
     return app.exec();

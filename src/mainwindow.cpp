@@ -346,10 +346,8 @@ void MainWindow::showWindow() {
 
 
 void MainWindow::closeEvent(QCloseEvent *event) {
-    if (event) {
-        event->ignore();
-        hide();
-    }
+    hide();
+    event->ignore();
 }
 
 void MainWindow::reloadLibrary() {

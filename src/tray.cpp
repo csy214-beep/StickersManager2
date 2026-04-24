@@ -105,15 +105,6 @@ void TrayIcon::updateShowMenu(const QVector<LibraryConfig> &libraries) {
     }
 }
 
-void TrayIcon::switchText(QAction *action) {
-    QString text = action->text();
-    if (text.contains("* ")) {
-        action->setText(text.replace("* ", ""));
-    } else {
-        action->setText("* " + text);
-    }
-}
-
 TrayIcon::~TrayIcon() {
     delete menu;
     m_instance = nullptr;

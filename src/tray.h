@@ -47,8 +47,6 @@ private:
 
     ~TrayIcon();
 
-    void switchText(QAction *action);
-
     // 单例实例指针
     static TrayIcon *m_instance;
 
