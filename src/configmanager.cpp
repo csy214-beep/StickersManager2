@@ -21,8 +21,8 @@ ConfigManager::ConfigManager(QObject *parent)
     migrateToMultiLibrary();
 }
 
-ConfigManager::~ConfigManager() {
-    saveConfig();
+ConfigManager::~ConfigManager()
+{
 }
 
 bool ConfigManager::loadConfig() {
@@ -33,6 +33,8 @@ bool ConfigManager::loadConfig() {
     }
 
     QByteArray data = configFile.readAll();
+    configFile.close(); // 显式关闭文件
+
     QJsonDocument doc = QJsonDocument::fromJson(data);
     if (doc.isNull()) {
         m_config = getDefaultConfig();
@@ -44,13 +46,41 @@ bool ConfigManager::loadConfig() {
 }
 
 bool ConfigManager::saveConfig() {
-    QFile configFile(m_configPath);
-    if (!configFile.open(QIODevice::WriteOnly)) {
+    // 原子写入：先写入临时文件，再重命名覆盖原文件
+    QString tmpPath = m_configPath + ".tmp";
+    QFile tmpFile(tmpPath);
+    if (!tmpFile.open(QIODevice::WriteOnly))
+    {
         return false;
     }
 
     QJsonDocument doc(m_config);
-    configFile.write(doc.toJson());
+    qint64 bytesWritten = tmpFile.write(doc.toJson());
+    tmpFile.close(); // 显式关闭临时文件
+
+    if (bytesWritten == -1)
+    {
+        QFile::remove(tmpPath);
+        return false;
+    }
+
+    // 删除原有配置文件（Windows 下 rename 不能直接覆盖）
+    if (QFile::exists(m_configPath))
+    {
+        if (!QFile::remove(m_configPath))
+        {
+            QFile::remove(tmpPath);
+            return false;
+        }
+    }
+
+    // 重命名临时文件为正式配置文件
+    if (!QFile::rename(tmpPath, m_configPath))
+    {
+        QFile::remove(tmpPath);
+        return false;
+    }
+
     return true;
 }
 
@@ -67,7 +97,7 @@ void ConfigManager::migrateToMultiLibrary() {
             libraries.append(libObj);
         }
         m_config["libraries"] = libraries;
-        saveConfig();
+        saveConfig(); // 迁移时保存一次（仅首次运行）
     }
 }
 

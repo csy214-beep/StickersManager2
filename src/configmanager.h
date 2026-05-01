@@ -29,12 +29,10 @@ class ConfigManager : public QObject {
 
 public:
     explicit ConfigManager(QObject *parent = nullptr);
-
     ~ConfigManager();
 
     // 加载和保存配置
     bool loadConfig();
-
     bool saveConfig();
 
     // 多仓库配置
@@ -53,29 +51,22 @@ public:
     int getPort() const;
 
     QSize getWindowSize() const;
-
     void setWindowSize(const QSize &size);
 
     QPoint getWindowPosition() const;
-
     void setWindowPosition(const QPoint &pos);
 
-    // 其他配置项...
+    // 其他配置项
     int getCategoryButtonSize() const;
-
     int getGridCellSize() const;
-
     int getGridColumns() const;
-
     bool getCopyOnDoubleClick() const;
-
     int getThumbnailCacheSize() const;
 
     QString getConfigPath() const;
 
-
 signals:
-    void configChanged(); // 添加信号声明
+    void configChanged();
 
 private:
     QJsonObject m_config;
