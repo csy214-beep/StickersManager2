@@ -6,3 +6,8 @@ cmake-build-release/
 StickersManager
 
 release/
+*.exe
+
+*.7z
+*.zip
+*.rar
