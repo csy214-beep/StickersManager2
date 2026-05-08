@@ -46,23 +46,23 @@ int main(int argc, char *argv[]) {
 
     if (!hasValidLibrary) {
         // 首次启动，引导用户选择表情库
-        QMessageBox::information(nullptr, "欢迎使用 Stickers Manager",
-                                 "欢迎使用 Stickers Manager！\n\n"
-                                 "请选择您的表情库文件夹。\n"
-                                 "表情库应该包含多个子文件夹，每个子文件夹代表一个分类。");
+        QMessageBox::information(nullptr, "Welcome to Stickers Manager",
+                                 "Welcome to Stickers Manager!\n\n"
+                                 "Please select your sticker library folder.\n"
+                                 "The library should contain multiple subfolders, each representing a category.");
 
         QString libraryPath = QFileDialog::getExistingDirectory(nullptr,
-                                                                "选择表情库文件夹", QDir::homePath());
+                                                                "Select Sticker Library Folder", QDir::homePath());
 
         if (!libraryPath.isEmpty()) {
             // 添加新的表情库配置
             LibraryConfig newLib(libraryPath, "Ctrl+Shift+E", true);
             config.addLibrary(newLib);
             config.saveConfig();
-            qDebug() << "首次启动，已添加表情库:" << libraryPath;
+            qDebug() << "First launch, added sticker library:" << libraryPath;
         } else {
-            QMessageBox::warning(nullptr, "警告",
-                                 "未选择表情库文件夹，程序将退出。");
+            QMessageBox::warning(nullptr, "Warning",
+                                 "No sticker library folder selected, program will exit.");
             exit(0);
         }
     }

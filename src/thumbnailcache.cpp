@@ -11,7 +11,7 @@ ThumbnailCache::ThumbnailCache(int maxSize, QObject *parent)
     connect(m_asyncLoader, &AsyncThumbnailLoader::thumbnailLoaded,
             this, &ThumbnailCache::onAsyncThumbnailLoaded);
 
-    qDebug() << "缩略图缓存初始化，最大大小:" << maxSize;
+    qDebug() << "Thumbnail cache initialized, max size:" << maxSize;
 }
 
 ThumbnailCache::~ThumbnailCache() {
@@ -22,7 +22,7 @@ ThumbnailCache::~ThumbnailCache() {
 QPixmap ThumbnailCache::get(const QString &key) {
     QMutexLocker locker(&m_cacheMutex);
     if (m_cache.contains(key)) {
-        qDebug() << "从缓存获取缩略图:" << key;
+        qDebug() << "Getting thumbnail from cache:" << key;
         return *m_cache.object(key);
     }
     return QPixmap();
@@ -41,13 +41,13 @@ void ThumbnailCache::loadThumbnailAsync(const QString &imagePath, const QSize &t
 
     if (!cached.isNull()) {
         // 缓存命中，直接发射信号
-        qDebug() << "缩略图缓存命中:" << imagePath;
+        qDebug() << "Thumbnail cache hit:" << imagePath;
         emit thumbnailReady(imagePath, cached);
         return;
     }
 
     // 异步加载
-    qDebug() << "请求异步加载缩略图:" << imagePath;
+    qDebug() << "Requesting async thumbnail load:" << imagePath;
     m_asyncLoader->loadThumbnail(imagePath, targetSize);
 }
 
@@ -66,7 +66,7 @@ void ThumbnailCache::cancelAllLoads() {
 void ThumbnailCache::clear() {
     QMutexLocker locker(&m_cacheMutex);
     m_cache.clear();
-    qDebug() << "缩略图缓存已清空";
+    qDebug() << "Thumbnail cache cleared";
 }
 
 QPixmap ThumbnailCache::createThumbnail(const QString &imagePath, const QSize &targetSize) {
@@ -81,7 +81,7 @@ QPixmap ThumbnailCache::createThumbnail(const QString &imagePath, const QSize &t
     }
 
     // 同步加载（不建议在主线程使用）
-    qWarning() << "警告：在主线程同步加载缩略图，可能导致界面卡顿:" << imagePath;
+    qWarning() << "Warning: Synchronous thumbnail loading on main thread may cause UI lag:" << imagePath;
 
     // 这里可以调用 ImageLoader 同步加载，但会阻塞UI
     // 暂时返回空，让异步加载器处理
@@ -89,17 +89,17 @@ QPixmap ThumbnailCache::createThumbnail(const QString &imagePath, const QSize &t
 }
 
 void ThumbnailCache::onAsyncThumbnailLoaded(const QString &filePath, const QPixmap &pixmap) {
-    qDebug() << "缩略图缓存收到异步加载结果:" << filePath << "大小:" << pixmap.size();
+    qDebug() << "Thumbnail cache received async load result:" << filePath << "Size:" << pixmap.size();
 
     if (pixmap.isNull()) {
-        qWarning() << "加载的缩略图为空，创建占位图:" << filePath;
+        qWarning() << "Loaded thumbnail is empty, creating placeholder:" << filePath;
 
         // 创建一个错误占位图
         QPixmap errorPixmap(100, 100);
         errorPixmap.fill(QColor(255, 230, 230));
         QPainter painter(&errorPixmap);
         painter.setPen(QColor(255, 100, 100));
-        painter.drawText(errorPixmap.rect(), Qt::AlignCenter, "错误");
+        painter.drawText(errorPixmap.rect(), Qt::AlignCenter, "Error");
         emit thumbnailReady(filePath, errorPixmap);
         return;
     }
@@ -110,7 +110,7 @@ void ThumbnailCache::onAsyncThumbnailLoaded(const QString &filePath, const QPixm
         m_cache.insert(filePath, new QPixmap(pixmap), pixmap.width() * pixmap.height() * 4);
     }
 
-    qDebug() << "发射缩略图就绪信号:" << filePath;
+    qDebug() << "Emitting thumbnail ready signal:" << filePath;
     emit thumbnailReady(filePath, pixmap);
 }
 

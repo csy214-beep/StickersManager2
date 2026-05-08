@@ -43,7 +43,7 @@ std::function<void(int)> ImageLoader::progressCallback = nullptr;
 QImage ImageLoader::loadImage(const QString &filePath) {
     QFileInfo fileInfo(filePath);
     if (!fileInfo.exists()) {
-        qWarning() << "文件不存在:" << filePath;
+        qWarning() << "File does not exist:" << filePath;
         return QImage();
     }
 
@@ -140,7 +140,7 @@ QImage ImageLoader::loadWithStb(const QString &filePath) {
     // 读取文件到内存
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "无法打开文件:" << filePath;
+        qWarning() << "Cannot open file:" << filePath;
         return QImage();
     }
 
@@ -148,7 +148,7 @@ QImage ImageLoader::loadWithStb(const QString &filePath) {
     file.close();
 
     if (data.isEmpty()) {
-        qWarning() << "文件为空:" << filePath;
+        qWarning() << "File is empty:" << filePath;
         return QImage();
     }
 
@@ -170,7 +170,7 @@ QImage ImageLoader::loadWithStb(const QString &filePath) {
     }
 
     if (!imageData) {
-        qWarning() << "stb_image 无法加载图像:" << filePath << stbi_failure_reason();
+        qWarning() << "stb_image cannot load image:" << filePath << stbi_failure_reason();
         return QImage();
     }
 
@@ -189,13 +189,13 @@ QImage ImageLoader::loadWithQt(const QString &filePath) {
     // Qt 内置支持的格式
     QImage image;
     if (!image.load(filePath)) {
-        qWarning() << "Qt 无法加载图像:" << filePath;
+        qWarning() << "Qt cannot load image:" << filePath;
         return QImage();
     }
 
     // 确保图像有合适的格式
     if (image.format() == QImage::Format_Invalid) {
-        qWarning() << "Qt 加载的图像格式无效:" << filePath;
+        qWarning() << "Qt loaded invalid image format:" << filePath;
         return QImage();
     }
 
@@ -329,7 +329,7 @@ QImage ImageLoader::createQImageFromData(unsigned char *data, int width, int hei
             }
             break;
         default:
-            qWarning() << "不支持的通道数:" << channels;
+            qWarning() << "Unsupported channel count:" << channels;
             return QImage();
     }
 

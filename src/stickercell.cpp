@@ -46,7 +46,7 @@ StickerCell::~StickerCell() {
 
 void StickerCell::setThumbnail(const QPixmap &pixmap) {
     if (pixmap.isNull()) {
-        qWarning() << "尝试设置空的缩略图到单元格:" << m_filePath;
+        qWarning() << "Attempting to set empty thumbnail to cell:" << m_filePath;
         return;
     }
 
@@ -66,7 +66,7 @@ void StickerCell::setThumbnail(const QPixmap &pixmap) {
     // 强制更新显示
     m_imageLabel->update();
     update();
-    qDebug() << "StickerCell: 已设置缩略图，大小:" << pixmap.size();
+    qDebug() << "StickerCell: Thumbnail set, size:" << pixmap.size();
 }
 
 void StickerCell::setPlaceholder() {
@@ -89,7 +89,7 @@ void StickerCell::mousePressEvent(QMouseEvent *event) {
     // 无论是左键还是右键，都先设置高亮
     m_isHighlighted = true;
     setStyleSheet("QFrame { background-color: #e3f2fd; border: 2px solid #2196f3; }");
-    
+
     if (event->button() == Qt::RightButton)
     {
         emit rightClicked(m_filePath);
@@ -109,7 +109,7 @@ void StickerCell::mouseDoubleClickEvent(QMouseEvent *event) {
 
     // 1. 验证文件存在
     if (!QFile::exists(m_filePath)) {
-        qWarning() << "文件不存在:" << m_filePath;
+        qWarning() << "File does not exist:" << m_filePath;
         TrayIcon::showMessage("Warning", "File not found: " + m_filePath);
         return;
     }
@@ -117,7 +117,7 @@ void StickerCell::mouseDoubleClickEvent(QMouseEvent *event) {
     // 2. 检查文件是否可读
     QFileInfo fileInfo(m_filePath);
     if (!fileInfo.isReadable()) {
-        qWarning() << "文件不可读:" << m_filePath;
+        qWarning() << "File is not readable:" << m_filePath;
         TrayIcon::showMessage("Warning", "File not accessible: " + m_filePath);
         return;
     }
@@ -125,7 +125,7 @@ void StickerCell::mouseDoubleClickEvent(QMouseEvent *event) {
     // 3. 获取剪贴板
     QClipboard *clipboard = QApplication::clipboard();
     if (!clipboard) {
-        qWarning() << "无法获取剪贴板";
+        qWarning() << "Cannot get clipboard";
         return;
     }
 
@@ -156,13 +156,13 @@ void StickerCell::mouseDoubleClickEvent(QMouseEvent *event) {
         if (clipboardData && clipboardData->hasUrls()) {
             QString firstUrl = clipboardData->urls().first().toLocalFile();
             if (QFileInfo(firstUrl).canonicalFilePath() == QFileInfo(m_filePath).canonicalFilePath()) {
-                qDebug() << "成功复制文件到剪贴板:" << m_filePath;
+                qDebug() << "Successfully copied file to clipboard:" << m_filePath;
                 TrayIcon::showMessage("Info", "File copied to clipboard: " + QFileInfo(m_filePath).fileName());
             } else {
-                qWarning() << "剪贴板内容不匹配";
+                qWarning() << "Clipboard content mismatch";
             }
         } else {
-            qWarning() << "剪贴板未包含文件URL";
+            qWarning() << "Clipboard does not contain file URL";
         }
     });
 

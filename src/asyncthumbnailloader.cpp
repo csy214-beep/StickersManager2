@@ -21,7 +21,7 @@ void AsyncThumbnailLoader::loadThumbnail(const QString &filePath, const QSize &t
 
     // 如果已经在加载，跳过
     if (m_pendingLoads.contains(filePath)) {
-        qDebug() << "缩略图已在加载队列中，跳过:" << filePath;
+        qDebug() << "Thumbnail already in loading queue, skipping:" << filePath;
         return;
     }
 
@@ -30,7 +30,7 @@ void AsyncThumbnailLoader::loadThumbnail(const QString &filePath, const QSize &t
     // 创建并启动加载任务
     LoadTask *task = new LoadTask(filePath, targetSize, this);
     m_threadPool->start(task);
-    qDebug() << "开始异步加载缩略图:" << filePath << "目标大小:" << targetSize;
+    qDebug() << "Starting async thumbnail load:" << filePath << "Target size:" << targetSize;
 }
 
 void AsyncThumbnailLoader::loadThumbnails(const QVector<QPair<QString, QSize> > &thumbnails) {
@@ -42,14 +42,14 @@ void AsyncThumbnailLoader::loadThumbnails(const QVector<QPair<QString, QSize> > 
 void AsyncThumbnailLoader::cancelLoad(const QString &filePath) {
     QMutexLocker locker(&m_mutex);
     m_pendingLoads.remove(filePath);
-    qDebug() << "取消加载缩略图:" << filePath;
+    qDebug() << "Canceling thumbnail load:" << filePath;
 }
 
 void AsyncThumbnailLoader::cancelAll() {
     QMutexLocker locker(&m_mutex);
     m_pendingLoads.clear();
     m_threadPool->clear(); // 清除队列中的任务
-    qDebug() << "取消所有缩略图加载任务";
+    qDebug() << "Canceling all thumbnail load tasks";
 }
 
 void AsyncThumbnailLoader::setMaxThreadCount(int count) {
@@ -61,17 +61,17 @@ void AsyncThumbnailLoader::handleThumbnailLoaded(const QString &filePath, const 
 
     // 检查是否还在加载列表中
     if (!m_pendingLoads.contains(filePath)) {
-        qDebug() << "缩略图已取消或超时，忽略:" << filePath;
+        qDebug() << "Thumbnail canceled or timed out, ignoring:" << filePath;
         return;
     }
 
     m_pendingLoads.remove(filePath);
 
     if (pixmap.isNull()) {
-        qWarning() << "缩略图加载失败:" << filePath;
+        qWarning() << "Thumbnail load failed:" << filePath;
         emit loadFinished(filePath, false);
     } else {
-        qDebug() << "缩略图加载完成:" << filePath << "大小:" << pixmap.size();
+        qDebug() << "Thumbnail load complete:" << filePath << "Size:" << pixmap.size();
         emit thumbnailLoaded(filePath, pixmap);
         emit loadFinished(filePath, true);
     }
@@ -90,7 +90,7 @@ void AsyncThumbnailLoader::LoadTask::run() {
     QImage image = AsyncThumbnailLoader::loadThumbnailInternal(m_filePath, m_targetSize);
     // 检查接收者是否仍然有效
     if (!m_receiver) {
-        qWarning() << "接收者已销毁，无法发送缩略图:" << m_filePath;
+        qWarning() << "Receiver destroyed, cannot send thumbnail:" << m_filePath;
         return;
     }
 
@@ -105,7 +105,7 @@ void AsyncThumbnailLoader::LoadTask::run() {
             QPixmap pixmap = QPixmap::fromImage(imageCopy);
             loader->handleThumbnailLoaded(filePathCopy, pixmap); }, Qt::QueuedConnection);
     } else {
-        qWarning() << "无法将接收者转换为 AsyncThumbnailLoader:" << m_filePath;
+        qWarning() << "Cannot cast receiver to AsyncThumbnailLoader:" << m_filePath;
     }
 }
 
@@ -113,14 +113,14 @@ QImage AsyncThumbnailLoader::loadThumbnailInternal(const QString &filePath, cons
     // 检查文件是否还存在（可能在加载过程中被删除）
     QFileInfo fileInfo(filePath);
     if (!fileInfo.exists()) {
-        qWarning() << "文件不存在:" << filePath;
+        qWarning() << "File does not exist:" << filePath;
         return QImage();
     }
 
     // 使用 ImageLoader 加载图像
     QImage image = ImageLoader::loadImage(filePath);
     if (image.isNull()) {
-        qWarning() << "无法加载图像:" << filePath;
+        qWarning() << "Cannot load image:" << filePath;
 
         // 创建错误占位图
         QImage placeholder(targetSize, QImage::Format_ARGB32);
@@ -128,7 +128,7 @@ QImage AsyncThumbnailLoader::loadThumbnailInternal(const QString &filePath, cons
         QPainter painter(&placeholder);
         painter.setPen(QColor(180, 180, 180));
         painter.setFont(QFont("Arial", 8));
-        painter.drawText(placeholder.rect(), Qt::AlignCenter, "加载失败");
+        painter.drawText(placeholder.rect(), Qt::AlignCenter, "Load Failed");
 
         return placeholder;
     }
@@ -137,7 +137,7 @@ QImage AsyncThumbnailLoader::loadThumbnailInternal(const QString &filePath, cons
     QImage thumbnail = image.scaled(targetSize,
                                     Qt::KeepAspectRatio, Qt::SmoothTransformation);
 
-    qDebug() << "缩略图生成完成:" << filePath << "原始大小:" << image.size() << "缩略图大小:" << thumbnail.size();
+    qDebug() << "Thumbnail generation complete:" << filePath << "Original size:" << image.size() << "Thumbnail size:" << thumbnail.size();
 
     return thumbnail;
 }

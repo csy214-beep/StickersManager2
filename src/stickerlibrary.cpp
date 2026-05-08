@@ -10,7 +10,7 @@ StickerLibrary::StickerLibrary(QObject *parent)
 bool StickerLibrary::setLibraryPath(const QString &path) {
     QDir dir(path);
     if (!dir.exists()) {
-        emit errorOccurred("目录不存在: " + path);
+        emit errorOccurred("Directory does not exist: " + path);
         return false;
     }
 
@@ -20,7 +20,7 @@ bool StickerLibrary::setLibraryPath(const QString &path) {
 
 bool StickerLibrary::scanLibrary() {
     if (m_libraryPath.isEmpty()) {
-        emit errorOccurred("未设置表情库路径");
+        emit errorOccurred("Sticker library path not set");
         return false;
     }
 
@@ -29,7 +29,7 @@ bool StickerLibrary::scanLibrary() {
 
     QDir libraryDir(m_libraryPath);
     if (!libraryDir.exists()) {
-        emit errorOccurred("表情库目录不存在: " + m_libraryPath);
+        emit errorOccurred("Sticker library directory does not exist: " + m_libraryPath);
         return false;
     }
 
@@ -67,12 +67,12 @@ bool StickerLibrary::scanLibrary() {
             m_categories[categoryName] = QVector<QString>::fromList(imageFiles);
             m_allStickers.append(imageFiles);
             totalStickers += imageFiles.size();
-            qDebug() << "分类" << categoryName << "加载了" << imageFiles.size() << "个表情";
+            qDebug() << "Category" << categoryName << "loaded" << imageFiles.size() << "stickers";
         }
     }
 
-    qDebug() << "表情库扫描完成，共" << m_categories.size() << "个分类，"
-            << totalStickers << "个表情";
+    qDebug() << "Sticker library scan complete, total" << m_categories.size() << "categories,"
+             << totalStickers << "stickers";
     emit libraryLoaded(true);
     return true;
 }

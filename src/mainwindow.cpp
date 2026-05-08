@@ -259,7 +259,7 @@ void MainWindow::displayStickers(const QVector<QString> &stickers) {
         calculatedColumns = 1;
     // 使用配置的列数作为最小值，但允许窗口变大时增加列数
     int columns = qMax(minColumns, calculatedColumns);
-    qDebug() << "配置列数:" << minColumns << ", 实际列数:" << columns;
+    qDebug() << "Configured columns:" << minColumns << ", Actual columns:" << columns;
 
     for (int i = 0; i < stickers.size(); ++i) {
         const QString &stickerPath = stickers[i];

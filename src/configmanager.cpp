@@ -15,7 +15,7 @@ ConfigManager::ConfigManager(QObject *parent)
     m_configPath = configDir.absolutePath() + "/config.json";
 
     if (!loadConfig()) {
-        qWarning() << "使用默认配置";
+        qWarning() << "Using default configuration";
     }
 
     migrateToMultiLibrary();
