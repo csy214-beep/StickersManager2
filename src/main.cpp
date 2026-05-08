@@ -5,6 +5,7 @@
 #include <QMessageBox>
 #include <QFileDialog>
 #include <QDir>
+#include <QStyleFactory>
 #include "log.hpp"
 #include "tray.h"
 #include "mainwindow.h"
@@ -23,6 +24,9 @@ int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     app.setQuitOnLastWindowClosed(false);
     app.setWindowIcon(QIcon(":/assets/st.png"));
+    QStringList styles = QStyleFactory::keys();
+    if (styles.contains("Fusion", Qt::CaseInsensitive))
+        app.setStyle("Fusion");
 
     ConfigManager config;
     PortListener portls;

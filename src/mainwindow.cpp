@@ -35,7 +35,7 @@ MainWindow::MainWindow(ConfigManager *config, QWidget *parent)
 
     initUI();
     loadLibrary();
-    loadStyle();
+    // loadStyle();
     m_searchTimer->setSingleShot(true);
     connect(m_searchTimer, &QTimer::timeout, this, &MainWindow::delayedSearch);
 }
@@ -56,7 +56,7 @@ MainWindow::MainWindow(ConfigManager *config, const LibraryConfig &libConfig, QW
 
     initUI();
     loadLibrary();
-    loadStyle();
+    // loadStyle();
     m_searchTimer->setSingleShot(true);
     connect(m_searchTimer, &QTimer::timeout, this, &MainWindow::delayedSearch);
 }
