@@ -10,7 +10,6 @@
 #include "tray.h"
 #include "mainwindow.h"
 #include "configmanager.h"
-#include "checkSingleInstance.hpp"
 #include "globalinputlistener.h"
 #include "convertcodetostring.hpp"
 #include "launcher.hpp"
@@ -22,6 +21,17 @@ int main(int argc, char *argv[]) {
     setLogLevel(LogLevel::Warning);
     if (!DEBUG_MODE) qInstallMessageHandler(messageHandler);
     QApplication app(argc, argv);
+    app.setApplicationName("Stickers Manager");
+    // 1. 创建锁文件对象，文件通常放在系统临时目录
+    QLockFile lockFile(QDir::temp().absoluteFilePath(QString("%1.lock").arg(app.applicationName())));
+
+    // 2. 尝试获取锁，参数100表示最多等待100毫秒
+    if (!lockFile.tryLock(100))
+    {
+        // 获取锁失败，说明已有实例在运行
+        QMessageBox::warning(nullptr, "Warning", "There is already an instance running!");
+        return 1; // 退出当前实例
+    }
     app.setQuitOnLastWindowClosed(false);
     app.setWindowIcon(QIcon(":/assets/st.png"));
     QStringList styles = QStyleFactory::keys();
@@ -29,10 +39,6 @@ int main(int argc, char *argv[]) {
         app.setStyle("Fusion");
 
     ConfigManager config;
-    PortListener portls;
-    if (!portls.checkSingleInstance(config.getPort())) {
-        exit(0);
-    }
 
     // 检查是否是首次启动（没有配置的仓库）
     auto libraries = config.getLibraries();
