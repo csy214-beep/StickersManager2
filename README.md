@@ -103,7 +103,6 @@ example:
         "lazyLoadEnabled": true,
         "thumbnailCacheSize": 200
     },
-    "port": 8868,
     "shortcuts": {
         "hotkey": "Ctrl+Shift+E",
         "useHotkey": true

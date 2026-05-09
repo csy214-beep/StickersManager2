@@ -48,8 +48,6 @@ public:
     bool isUseHotkey() const;
     void setHotkey(const QString &hotkey);
 
-    int getPort() const;
-
     QSize getWindowSize() const;
     void setWindowSize(const QSize &size);
 

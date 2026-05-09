@@ -146,7 +146,6 @@ QJsonObject ConfigManager::getDefaultConfig() {
     QJsonObject config;
 
     config["libraryPath"] = "";
-    config["port"] = 8868;
 
     QJsonObject shortcuts;
     shortcuts["useHotkey"] = true;
@@ -216,10 +215,6 @@ void ConfigManager::setHotkey(const QString &hotkey) {
         libs[0].hotkey = hotkey;
         setLibraries(libs);
     }
-}
-
-int ConfigManager::getPort() const {
-    return m_config["port"].toInt();
 }
 
 QSize ConfigManager::getWindowSize() const {

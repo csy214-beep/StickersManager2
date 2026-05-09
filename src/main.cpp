@@ -23,7 +23,9 @@ int main(int argc, char *argv[]) {
     QApplication app(argc, argv);
     app.setApplicationName("Stickers Manager");
     // 1. 创建锁文件对象，文件通常放在系统临时目录
-    QLockFile lockFile(QDir::temp().absoluteFilePath(QString("%1.lock").arg(app.applicationName())));
+    QString userName = QFileInfo(QStandardPaths::writableLocation(QStandardPaths::HomeLocation)).fileName();
+    userName = !userName.isEmpty() ? userName : "unknown";
+    QLockFile lockFile(QDir::temp().absoluteFilePath(QString("%1_%2.lock").arg(userName).arg(app.applicationName())));
 
     // 2. 尝试获取锁，参数100表示最多等待100毫秒
     if (!lockFile.tryLock(100))
