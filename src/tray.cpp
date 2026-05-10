@@ -1,5 +1,5 @@
 /*
-* PLauncher - Live2D Virtual Desktop Partner
+ * PLauncher - Live2D Virtual Desktop Partner
  * https://gitee.com/Pfolg/plauncher
  * https://sourceforge.net/projects/pfolg-plauncher/
  * Copyright (c) 2025 SY Cheng
@@ -19,28 +19,36 @@
 // 初始化静态成员变量
 TrayIcon *TrayIcon::m_instance = nullptr;
 
-TrayIcon *TrayIcon::instance() {
-    if (!m_instance) {
+TrayIcon *TrayIcon::instance()
+{
+    if (!m_instance)
+    {
         m_instance = new TrayIcon();
     }
     return m_instance;
 }
 
 void TrayIcon::showMessage(const QString &title, const QString &msg,
-                           MessageIcon icon, int timeout) {
-    if (m_instance && !m_instance->m_silentMode) {
+                           MessageIcon icon, int timeout)
+{
+    if (m_instance && !m_instance->m_silentMode)
+    {
         m_instance->QSystemTrayIcon::showMessage(title, msg, icon, timeout);
     }
 }
 
 TrayIcon::TrayIcon(QObject *parent)
-    : QSystemTrayIcon(parent) {
+    : QSystemTrayIcon(parent)
+{
     QString ico_path = ":/assets/st.png";
     QFileInfo ico(ico_path);
-    if (ico.exists()) {
+    if (ico.exists())
+    {
         qDebug() << "ico found";
         setIcon(QIcon(ico_path));
-    } else {
+    }
+    else
+    {
         qDebug() << "icon not found";
         QIcon icon = QApplication::style()->standardIcon(QStyle::SP_DirIcon);
         setIcon(icon);
@@ -56,23 +64,26 @@ TrayIcon::TrayIcon(QObject *parent)
     action_openRepo = new QAction("Pictures", this);
     action_rescan = new QAction("Rescan", this);
     QAction *action_openPath = new QAction("Open App Dir", this);
+    QAction *openGithubAction = new QAction("GitHub", this);
     QAction *exitAction = new QAction("Exit", this);
 
     // 连接信号和槽（保持原有连接不变）
-    connect(exitAction, &QAction::triggered, []() {
-        QCoreApplication::quit();
-    });
+    connect(exitAction, &QAction::triggered, []()
+            { QCoreApplication::quit(); });
 
-    connect(action_openPath, &QAction::triggered, []() {
+    connect(action_openPath, &QAction::triggered, []()
+            {
         QString appDir = QCoreApplication::applicationDirPath();
-        launch(appDir);
-    });
+        launch(appDir); });
+    connect(openGithubAction, &QAction::triggered, []()
+            {
+        QString githubUrl = "https://github.com/csy214-beep/StickersManager2";
+        launch(githubUrl); });
 
     menu->addMenu(showSubMenu);
-    menu->addAction(action_rescan);
-    menu->addAction(action_settings);
-    menu->addAction(action_openPath);
-    menu->addAction(action_openRepo);
+    menu->addActions({action_rescan, action_settings, action_openPath, action_openRepo});
+    menu->addSeparator();
+    menu->addAction(openGithubAction);
     menu->addSeparator();
     menu->addAction(exitAction);
 
@@ -85,17 +96,20 @@ TrayIcon::TrayIcon(QObject *parent)
     qDebug() << "TrayIcon singleton initialized";
 }
 
-void TrayIcon::updateShowMenu(const QVector<LibraryConfig> &libraries) {
+void TrayIcon::updateShowMenu(const QVector<LibraryConfig> &libraries)
+{
     showSubMenu->clear();
 
-    for (int i = 0; i < libraries.size(); ++i) {
+    for (int i = 0; i < libraries.size(); ++i)
+    {
         const LibraryConfig &lib = libraries[i];
         if (!lib.enabled)
             continue;
 
         QFileInfo dirInfo(lib.path);
         QString menuText = dirInfo.fileName();
-        if (menuText.isEmpty()) {
+        if (menuText.isEmpty())
+        {
             menuText = lib.path;
         }
 
@@ -105,7 +119,8 @@ void TrayIcon::updateShowMenu(const QVector<LibraryConfig> &libraries) {
     }
 }
 
-TrayIcon::~TrayIcon() {
+TrayIcon::~TrayIcon()
+{
     delete menu;
     m_instance = nullptr;
 }
