@@ -52,6 +52,8 @@ protected:
 private slots:
     void onSearchTextChanged(const QString &text);
 
+    void onCategorySearchTextChanged(const QString &text);
+
     void onCategoryClicked();
 
     void onStickerClicked(const QString &filePath);
@@ -97,6 +99,7 @@ private:
     QWidget *m_stickerContainer;
     QGridLayout *m_gridLayout;
     QLineEdit *m_searchInput;
+    QLineEdit *m_categorySearchInput;
 
     QTimer *m_searchTimer;
     QString m_currentCategory;

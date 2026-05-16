@@ -124,6 +124,12 @@ QWidget *MainWindow::createCategoryPanel() {
     panel->setMaximumWidth(buttonSize + 20);
     panel->setMinimumWidth(buttonSize + 20);
 
+    m_categorySearchInput = new QLineEdit();
+    m_categorySearchInput->setPlaceholderText("Search category...");
+    m_categorySearchInput->setClearButtonEnabled(true);
+    connect(m_categorySearchInput, &QLineEdit::textChanged, this, &MainWindow::onCategorySearchTextChanged);
+    layout->addWidget(m_categorySearchInput);
+
     m_categoryScroll = new QScrollArea();
     m_categoryScroll->setWidgetResizable(true);
     m_categoryScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -231,6 +237,7 @@ void MainWindow::populateCategories() {
 void MainWindow::showCategory(const QString &categoryName) {
     m_currentCategory = categoryName;
     m_searchInput->clear();
+    m_categorySearchInput->clear();
     // 侧边栏的加载不要取消，只取消右侧内容的加载
     // m_thumbnailCache->cancelAllLoads();
 
@@ -374,6 +381,18 @@ void MainWindow::onSearchTextChanged(const QString &text) {
     } else {
         m_searchTimer->stop();
         m_searchTimer->start(300);
+    }
+}
+
+void MainWindow::onCategorySearchTextChanged(const QString &text) {
+    for (auto it = m_categoryButtons.begin(); it != m_categoryButtons.end(); ++it) {
+        CategoryButton *button = it.key();
+        QString categoryName = it.value();
+        if (text.isEmpty() || categoryName.contains(text, Qt::CaseInsensitive)) {
+            button->show();
+        } else {
+            button->hide();
+        }
     }
 }
 
