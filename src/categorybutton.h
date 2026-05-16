@@ -16,8 +16,6 @@ public:
 
     void setThumbnail(const QPixmap &pixmap);
 
-    void setButtonSize(int size);
-
     QString getCategoryName() const { return m_categoryName; }
 
 protected:
@@ -27,7 +25,6 @@ private:
     void updateIcon();
 
     QString m_categoryName;
-    QString m_firstStickerPath;
     int m_buttonSize;
     QPixmap m_currentPixmap;
 };

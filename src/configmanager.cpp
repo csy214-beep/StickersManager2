@@ -4,9 +4,6 @@
 #include <QDebug>
 #include <QJsonArray>
 
-#include "launcher.hpp"
-#include "tray.h"
-
 ConfigManager::ConfigManager(QObject *parent)
     : QObject(parent) {
     QString exeDir = QCoreApplication::applicationDirPath();
@@ -33,7 +30,7 @@ bool ConfigManager::loadConfig() {
     }
 
     QByteArray data = configFile.readAll();
-    configFile.close(); // 显式关闭文件
+    configFile.close();
 
     QJsonDocument doc = QJsonDocument::fromJson(data);
     if (doc.isNull()) {
@@ -46,7 +43,6 @@ bool ConfigManager::loadConfig() {
 }
 
 bool ConfigManager::saveConfig() {
-    // 原子写入：先写入临时文件，再重命名覆盖原文件
     QString tmpPath = m_configPath + ".tmp";
     QFile tmpFile(tmpPath);
     if (!tmpFile.open(QIODevice::WriteOnly))
@@ -56,7 +52,7 @@ bool ConfigManager::saveConfig() {
 
     QJsonDocument doc(m_config);
     qint64 bytesWritten = tmpFile.write(doc.toJson());
-    tmpFile.close(); // 显式关闭临时文件
+    tmpFile.close();
 
     if (bytesWritten == -1)
     {
@@ -64,7 +60,6 @@ bool ConfigManager::saveConfig() {
         return false;
     }
 
-    // 删除原有配置文件（Windows 下 rename 不能直接覆盖）
     if (QFile::exists(m_configPath))
     {
         if (!QFile::remove(m_configPath))
@@ -74,7 +69,6 @@ bool ConfigManager::saveConfig() {
         }
     }
 
-    // 重命名临时文件为正式配置文件
     if (!QFile::rename(tmpPath, m_configPath))
     {
         QFile::remove(tmpPath);
@@ -97,7 +91,7 @@ void ConfigManager::migrateToMultiLibrary() {
             libraries.append(libObj);
         }
         m_config["libraries"] = libraries;
-        saveConfig(); // 迁移时保存一次（仅首次运行）
+        saveConfig();
     }
 }
 
@@ -125,21 +119,12 @@ void ConfigManager::setLibraries(const QVector<LibraryConfig> &libs) {
         libArray.append(obj);
     }
     m_config["libraries"] = libArray;
-    emit configChanged();
 }
 
 void ConfigManager::addLibrary(const LibraryConfig &lib) {
     auto libs = getLibraries();
     libs.append(lib);
     setLibraries(libs);
-}
-
-void ConfigManager::removeLibrary(int index) {
-    auto libs = getLibraries();
-    if (index >= 0 && index < libs.size()) {
-        libs.removeAt(index);
-        setLibraries(libs);
-    }
 }
 
 QJsonObject ConfigManager::getDefaultConfig() {
@@ -201,22 +186,6 @@ QString ConfigManager::getHotkey() const {
     return libs.isEmpty() ? "Ctrl+Shift+E" : libs.first().hotkey;
 }
 
-bool ConfigManager::isUseHotkey() const {
-    auto libs = getLibraries();
-    return libs.isEmpty() ? true : libs.first().enabled;
-}
-
-void ConfigManager::setHotkey(const QString &hotkey) {
-    auto libs = getLibraries();
-    if (libs.isEmpty()) {
-        LibraryConfig newLib("", hotkey, true);
-        addLibrary(newLib);
-    } else {
-        libs[0].hotkey = hotkey;
-        setLibraries(libs);
-    }
-}
-
 QSize ConfigManager::getWindowSize() const {
     QJsonArray sizeArray = m_config["windowSize"].toArray();
     if (sizeArray.size() == 2) {
@@ -225,28 +194,12 @@ QSize ConfigManager::getWindowSize() const {
     return QSize(540, 430);
 }
 
-void ConfigManager::setWindowSize(const QSize &size) {
-    QJsonArray sizeArray;
-    sizeArray.append(size.width());
-    sizeArray.append(size.height());
-    m_config["windowSize"] = sizeArray;
-    emit configChanged();
-}
-
 QPoint ConfigManager::getWindowPosition() const {
     QJsonArray posArray = m_config["windowPosition"].toArray();
     if (posArray.size() == 2) {
         return QPoint(posArray[0].toInt(), posArray[1].toInt());
     }
     return QPoint(900, 50);
-}
-
-void ConfigManager::setWindowPosition(const QPoint &pos) {
-    QJsonArray posArray;
-    posArray.append(pos.x());
-    posArray.append(pos.y());
-    m_config["windowPosition"] = posArray;
-    emit configChanged();
 }
 
 int ConfigManager::getCategoryButtonSize() const {
@@ -262,11 +215,6 @@ int ConfigManager::getGridCellSize() const {
 int ConfigManager::getGridColumns() const {
     QJsonObject ui = m_config["ui"].toObject();
     return ui["gridColumns"].toInt(3);
-}
-
-bool ConfigManager::getCopyOnDoubleClick() const {
-    QJsonObject behavior = m_config["behavior"].toObject();
-    return behavior["copyOnDoubleClick"].toBool(true);
 }
 
 int ConfigManager::getThumbnailCacheSize() const {

@@ -12,8 +12,7 @@
 #include <QClipboard>
 #include <QMimeData>
 #include <QTimer>
-#include  <QMimeData>
-#include  "tray.h"
+#include "tray.h"
 
 StickerCell::StickerCell(const QString &filePath, int cellSize, QWidget *parent)
     : QFrame(parent)

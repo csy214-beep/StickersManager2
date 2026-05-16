@@ -15,8 +15,6 @@
 #include <QDebug>
 #include <QDir>
 #include <QFileInfo>
-#include <QPair>
-#include <QFuture>
 #include <QtConcurrent>
 #include "tray.h"
 

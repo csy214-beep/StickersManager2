@@ -2,16 +2,12 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QDebug>
-#include <QBuffer>
-#include <QtGlobal>
 
-// 禁用 stb_image 的警告
 #ifdef _MSC_VER
 #pragma warning(push)
 #pragma warning(disable: 4996 4100 4244)
 #endif
 
-// 只定义 STB_IMAGE_IMPLEMENTATION 一次
 #ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 #define STBI_NO_STDIO
@@ -30,50 +26,25 @@
 #pragma warning(pop)
 #endif
 
-// 检查是否有 libwebp
-#ifdef HAVE_WEBP
-#include <webp/decode.h>
-#include <webp/demux.h>
-#endif
-
-#include <memory>
-
-std::function<void(int)> ImageLoader::progressCallback = nullptr;
-
 QImage ImageLoader::loadImage(const QString &filePath) {
     QFileInfo fileInfo(filePath);
     if (!fileInfo.exists()) {
-        qWarning() << "File does not exist:" << filePath;
         return QImage();
     }
 
     Format format = detectFormat(filePath);
 
-    // 根据格式选择加载器
     switch (format) {
-        case Format::WEBP:
-#ifdef HAVE_WEBP
-            return loadWebP(filePath);
-#else
-            // 如果没有 libwebp，尝试用 stb_image 加载
-            // stb_image 从 2.27 开始支持 webp
-            break;
-#endif
         case Format::SVG:
         case Format::ICO:
-            // Qt 支持这些格式
             return loadWithQt(filePath);
         default:
-            // 使用 stb_image 加载常见格式
             QImage result = loadWithStb(filePath);
             if (!result.isNull()) {
                 return result;
             }
-            // 如果 stb_image 失败，尝试 Qt
             return loadWithQt(filePath);
     }
-
-    return loadWithStb(filePath);
 }
 
 ImageLoader::Format ImageLoader::detectFormat(const QString &filePath) {
@@ -112,35 +83,9 @@ QStringList ImageLoader::getSupportedExtensions() {
     };
 }
 
-QString ImageLoader::getFormatDescription(Format format) {
-    static QHash<Format, QString> descriptions = {
-        {Format::PNG, "Portable Network Graphics"},
-        {Format::JPEG, "JPEG Image"},
-        {Format::GIF, "Graphics Interchange Format"},
-        {Format::BMP, "Bitmap Image"},
-        {Format::TIFF, "Tagged Image File Format"},
-        {Format::WEBP, "Google WebP Image"},
-        {Format::PSD, "Adobe Photoshop Document"},
-        {Format::HDR, "High Dynamic Range Image"},
-        {Format::TGA, "Truevision TGA Image"},
-        {Format::ICO, "Windows Icon"},
-        {Format::SVG, "Scalable Vector Graphics"},
-        {Format::HEIC, "High Efficiency Image Format"},
-        {Format::AVIF, "AV1 Image File Format"}
-    };
-
-    return descriptions.value(format, "Unknown Format");
-}
-
-void ImageLoader::setProgressCallback(std::function<void(int)> callback) {
-    progressCallback = callback;
-}
-
 QImage ImageLoader::loadWithStb(const QString &filePath) {
-    // 读取文件到内存
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "Cannot open file:" << filePath;
         return QImage();
     }
 
@@ -148,13 +93,7 @@ QImage ImageLoader::loadWithStb(const QString &filePath) {
     file.close();
 
     if (data.isEmpty()) {
-        qWarning() << "File is empty:" << filePath;
         return QImage();
-    }
-
-    // 调用进度回调
-    if (progressCallback) {
-        progressCallback(10);
     }
 
     int width, height, channels;
@@ -165,41 +104,27 @@ QImage ImageLoader::loadWithStb(const QString &filePath) {
         0
     );
 
-    if (progressCallback) {
-        progressCallback(50);
-    }
-
     if (!imageData) {
         qWarning() << "stb_image cannot load image:" << filePath << stbi_failure_reason();
         return QImage();
     }
 
     QImage result = createQImageFromData(imageData, width, height, channels);
-
-    if (progressCallback) {
-        progressCallback(100);
-    }
-
     stbi_image_free(imageData);
 
     return result;
 }
 
 QImage ImageLoader::loadWithQt(const QString &filePath) {
-    // Qt 内置支持的格式
     QImage image;
     if (!image.load(filePath)) {
-        qWarning() << "Qt cannot load image:" << filePath;
         return QImage();
     }
 
-    // 确保图像有合适的格式
     if (image.format() == QImage::Format_Invalid) {
-        qWarning() << "Qt loaded invalid image format:" << filePath;
         return QImage();
     }
 
-    // 转换为标准格式以便处理
     if (image.format() != QImage::Format_ARGB32 &&
         image.format() != QImage::Format_RGB32) {
         image = image.convertToFormat(QImage::Format_ARGB32);
@@ -208,81 +133,21 @@ QImage ImageLoader::loadWithQt(const QString &filePath) {
     return image;
 }
 
-#ifdef HAVE_WEBP
-QImage ImageLoader::loadWebP(const QString &filePath) {
-    QFile file(filePath);
-    if (!file.open(QIODevice::ReadOnly)) {
-        return QImage();
-    }
-
-    QByteArray data = file.readAll();
-    file.close();
-
-    // 检测是否为动画 WebP
-    WebPData webpData;
-    webpData.bytes = reinterpret_cast<const uint8_t *>(data.constData());
-    webpData.size = data.size();
-
-    WebPAnimDecoderOptions dec_options;
-    WebPAnimDecoderOptionsInit(&dec_options);
-    dec_options.color_mode = MODE_BGRA;
-
-    WebPAnimDecoder *dec = WebPAnimDecoderNew(&webpData, &dec_options);
-    if (!dec) {
-        // 不是动画，尝试作为静态图像加载
-        int width, height;
-        uint8_t *webpData = WebPDecodeBGRA(
-            reinterpret_cast<const uint8_t *>(data.constData()),
-            data.size(),
-            &width, &height
-        );
-
-        if (!webpData) {
-            return QImage();
-        }
-
-        QImage image(webpData, width, height, QImage::Format_ARGB32);
-        QImage result = image.copy(); // 深拷贝，因为 webpData 将被释放
-
-        WebPFree(webpData);
-        return result;
-    }
-
-    // 处理动画 WebP（这里只取第一帧）
-    int timestamp;
-    uint8_t *frameData;
-
-    if (!WebPAnimDecoderGetNext(dec, &frameData, &timestamp)) {
-        WebPAnimDecoderDelete(dec);
-        return QImage();
-    }
-
-    WebPAnimInfo anim_info;
-    WebPAnimDecoderGetInfo(dec, &anim_info);
-
-    QImage image(frameData, anim_info.canvas_width, anim_info.canvas_height, QImage::Format_ARGB32);
-    QImage result = image.copy();
-
-    WebPAnimDecoderDelete(dec);
-    return result;
-}
-#endif
-
 QImage ImageLoader::createQImageFromData(unsigned char *data, int width, int height, int channels) {
     if (!data || width <= 0 || height <= 0) {
         return QImage();
     }
 
-    QImage::Format format;
-    int bytesPerLine = 0;
-
     switch (channels) {
-        case 1: // 灰度
-            format = QImage::Format_Grayscale8;
-            bytesPerLine = width;
-            break;
-        case 2: // 灰度 + alpha
-            // Qt 没有直接的格式，转换为 ARGB32
+        case 1:
+        {
+            QImage image(width, height, QImage::Format_Grayscale8);
+            for (int y = 0; y < height; ++y) {
+                memcpy(image.scanLine(y), data + y * width, width);
+            }
+            return image;
+        }
+        case 2:
         {
             QImage image(width, height, QImage::Format_ARGB32);
             for (int y = 0; y < height; ++y) {
@@ -295,43 +160,27 @@ QImage ImageLoader::createQImageFromData(unsigned char *data, int width, int hei
             }
             return image;
         }
-        break;
-        case 3: // RGB
-            format = QImage::Format_RGB888;
-            bytesPerLine = width * 3;
-            // 需要重新排列，stb_image 返回的是 RGB
-            {
-                QImage image(width, height, QImage::Format_RGB888);
-                for (int y = 0; y < height; ++y) {
-                    memcpy(image.scanLine(y), data + y * width * 3, width * 3);
-                }
-                return image;
+        case 3:
+        {
+            QImage image(width, height, QImage::Format_RGB888);
+            for (int y = 0; y < height; ++y) {
+                memcpy(image.scanLine(y), data + y * width * 3, width * 3);
             }
-            break;
-        case 4: // RGBA
-            format = QImage::Format_RGBA8888;
-            bytesPerLine = width * 4;
-            // stb_image 返回的是 RGBA，Qt 使用 ARGB，需要转换
-            {
-                QImage image(width, height, QImage::Format_ARGB32);
-                for (int y = 0; y < height; ++y) {
-                    QRgb *scanLine = reinterpret_cast<QRgb *>(image.scanLine(y));
-                    for (int x = 0; x < width; ++x) {
-                        int offset = y * width * 4 + x * 4;
-                        unsigned char r = data[offset];
-                        unsigned char g = data[offset + 1];
-                        unsigned char b = data[offset + 2];
-                        unsigned char a = data[offset + 3];
-                        scanLine[x] = qRgba(r, g, b, a);
-                    }
+            return image;
+        }
+        case 4:
+        {
+            QImage image(width, height, QImage::Format_ARGB32);
+            for (int y = 0; y < height; ++y) {
+                QRgb *scanLine = reinterpret_cast<QRgb *>(image.scanLine(y));
+                for (int x = 0; x < width; ++x) {
+                    int offset = y * width * 4 + x * 4;
+                    scanLine[x] = qRgba(data[offset], data[offset + 1], data[offset + 2], data[offset + 3]);
                 }
-                return image;
             }
-            break;
+            return image;
+        }
         default:
-            qWarning() << "Unsupported channel count:" << channels;
             return QImage();
     }
-
-    return QImage(data, width, height, bytesPerLine, format);
 }

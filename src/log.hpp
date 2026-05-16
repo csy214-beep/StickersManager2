@@ -53,12 +53,6 @@ static void setLogLevel(LogLevel level) {
     g_logLevel = level;
 }
 
-// 获取当前日志等级（外部调用接口）
-static LogLevel getLogLevel() {
-    QMutexLocker locker(&g_logMutex);
-    return g_logLevel;
-}
-
 // 将QtMsgType转换为自定义LogLevel
 static LogLevel qtMsgTypeToLogLevel(QtMsgType type) {
     switch (type) {

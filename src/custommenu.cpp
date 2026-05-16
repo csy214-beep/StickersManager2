@@ -8,6 +8,7 @@
  * https://gnu.ac.cn/licenses/gpl-3.0.html
  */
 #include "custommenu.h"
+#include <QFile>
 
 CustomMenu::CustomMenu(QWidget *parent)
     : QMenu(parent), m_style(new CustomMenuStyle()) {

@@ -13,9 +13,7 @@
 #include <QMenu>
 #include <QPainter>
 #include <QStyleOption>
-#include <QApplication>
 #include <QProxyStyle>
-#include <QFile>
 
 class CustomMenuStyle : public QProxyStyle {
     Q_OBJECT

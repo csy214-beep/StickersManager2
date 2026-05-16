@@ -9,11 +9,8 @@
  */
 #pragma once
 
-#include <QCoreApplication>
-#include <QDebug>
 #include <QKeySequence>
 #include "globalinputlistener.h"
-#include <QObject>
 
 QString keyCodeToKeyString(int keyCode);
 

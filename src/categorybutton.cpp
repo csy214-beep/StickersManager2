@@ -9,15 +9,12 @@ CategoryButton::CategoryButton(const QString &categoryName,
                                QWidget *parent)
     : QPushButton(parent),
       m_categoryName(categoryName),
-      m_firstStickerPath(firstStickerPath),
       m_buttonSize(buttonSize)
 {
-    // 设置固定大小，确保是正方形
     setFixedSize(buttonSize, buttonSize);
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     setToolTip(categoryName);
-    
-    // 添加边框样式
+
     setStyleSheet(R"(
         CategoryButton {
             background-color: #ffffff;
@@ -40,16 +37,6 @@ void CategoryButton::setThumbnail(const QPixmap &pixmap)
     if (!pixmap.isNull())
     {
         m_currentPixmap = pixmap;
-        updateIcon();
-    }
-}
-
-void CategoryButton::setButtonSize(int size)
-{
-    m_buttonSize = size;
-    setFixedSize(size, size);
-    if (!m_currentPixmap.isNull())
-    {
         updateIcon();
     }
 }
