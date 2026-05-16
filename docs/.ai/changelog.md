@@ -1,8 +1,27 @@
 # Change Log
 
-## Latest Changes
+## [Code Cleanup & Config Hot-Reload]
 
-### [Bug Fixes and Configuration Safety Update]
+- **ADDED**: Category search input on left sidebar — `QLineEdit` filters category buttons by name, clicking a matching category jumps to it
+- **ADDED**: `ConfigManager::reloadFromDisk()` — re-reads config JSON from disk at runtime
+- **ADDED**: `rebuildHotkeyMapping()` helper in main.cpp — rebuilds hotkey-to-window map centrally
+- **CHANGED**: Rescan button now hot-reloads config: creates `MainWindow` for new libraries, rebuilds hotkey map + tray menu, then rescans existing windows
+- **CHANGED**: Config format simplified — removed legacy `libraryPath`, `shortcuts`, `windowPosition`, `windowSize` (flat); window settings now under `window.position`/`window.size`; removed unused `lazyLoadEnabled`; added `version` field. Backward-compat reads old flat keys as fallback.
+- **CHANGED**: ConfigManager — removed `migrateToMultiLibrary()`, `removeLibrary()`, `isUseHotkey()`, `setHotkey()`, `setWindowSize()`, `setWindowPosition()`, `getCopyOnDoubleClick()`, `configChanged` signal (all dead code)
+- **REMOVED**: Mouse hook from `GlobalInputListener` — `mouseHookProc`, `mouseReleased`/`mouseMoved` signals, `MouseButton` enum, `isListening` flag (unused)
+- **REMOVED**: `MainWindow::loadStyle()` — dead code (commented out calls), along with `getLibraryPath()` and `setLibraryConfig()`
+- **REMOVED**: `MainWindow` first constructor (without `LibraryConfig`) — unused; all callers pass explicit config
+- **REMOVED**: `StickerLibrary::getSupportedFormats()`, `getLibraryPath()`, `getAllStickers()`, `libraryLoaded`/`errorOccurred` signals — all unused
+- **REMOVED**: `ThumbnailCache::cancelLoad()`, `createThumbnail()`, `getCacheKey()` — unused
+- **REMOVED**: `AsyncThumbnailLoader::cancelLoad()`, `setMaxThreadCount()`, `loadFinished` signal — unused
+- **REMOVED**: `ImageLoader::getFormatDescription()`, `setProgressCallback()`, `progressCallback`, entire `#ifdef HAVE_WEBP` block — dead or never-compiled code
+- **REMOVED**: `CategoryButton::m_firstStickerPath`, `setButtonSize()` — unused
+- **REMOVED**: `TrayIcon::m_silentMode` — always false, never set
+- **REMOVED**: Unused includes across multiple files; duplicate `#include <QMimeData>` in stickercell.cpp
+- **REMOVED**: `LogLevel::getLogLevel()` — declared but never called
+- **REMOVED**: Stale references to `window.qss`, `window2.qss`, `checkSingleInstance.hpp` from docs and README
+
+## [Bug Fixes and Configuration Safety Update]
 
 - **FIXED**: Removed auto-saving config in resizeEvent - program no longer overwrites user config arbitrarily
 - **FIXED**: Right-click preview now correctly applies selection border to target cell
@@ -15,7 +34,7 @@
 - **MODIFIED**: ConfigManager - only modifies config on first run or if config is corrupted
 - **MODIFIED**: displayStickers uses config columns as minimum, adapts to larger windows
 
-### [Multi-Window Update]
+## [Multi-Window Update]
 
 - ADDED: Multi-window support - one window per enabled library
 - ADDED: MainWindow constructor accepting LibraryConfig
@@ -29,7 +48,7 @@
 - REMOVED: MainWindow::m_currentLibraryPath (obsolete)
 - MODIFIED: main.cpp completely rewritten for multi-window management
 - MODIFIED: main.cpp creates MainWindow instances in loop
-- MODIFIED: main.cpp manages QMap<QString, MainWindow\*> windows
+- MODIFIED: main.cpp manages QMap<QString, MainWindow*> windows
 - MODIFIED: main.cpp handles global hotkeys centrally
 - MODIFIED: main.cpp connects tray menu signals to window toggling
 - MODIFIED: MainWindow::loadLibrary() uses m_libConfig.path

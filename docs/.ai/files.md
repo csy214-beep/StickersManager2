@@ -1,58 +1,54 @@
 # File Structure
 
-## Root Files
+## Root
 
-- CMakeLists.txt: Build configuration
-- README.md: Human-readable README
-- LICENSE: License file
-- resources.qrc: Qt resource file
-- .gitignore: Git ignore rules
+- `CMakeLists.txt`: Build config, globs all `.cpp`/`.h`/`.hpp` from `src/`
+- `resources.qrc`: Qt resource file (st.png, menu.qss, st.ico)
+- `pkg.iss`: Inno Setup packaging script
 
-## Directory Structure
+## src/ — Application Source
 
-### src/
+### Core
 
-Application source code
+| File | Role |
+|------|------|
+| `main.cpp` | Entry point; creates windows, hotkey map, tray, connects Rescan hot-reload |
+| `mainwindow.h/cpp` | Main window UI; per-library instance with category panel + sticker grid |
+| `configmanager.h/cpp` | JSON config I/O with hot-reload support (`reloadFromDisk()`) |
+| `stickerlibrary.h/cpp` | Directory scanner; maps subdirectories → categories |
+| `thumbnailcache.h/cpp` | LRU `QCache` wrapper with async loading signals |
+| `imageloader.h/cpp` | Image loading: stb_image (primary), Qt (fallback) |
+| `tray.h/cpp` | System tray singleton with per-library "Show" submenu |
 
-#### Core Files
+### Widgets
 
-- main.cpp: Application entry point with multi-window management
-- mainwindow.h/cpp: Main window UI and logic, supports per-library construction
-- configmanager.h/cpp: Configuration management with multi-library support
-- stickerlibrary.h/cpp: Sticker library model (per window)
-- thumbnailcache.h/cpp: Thumbnail cache system (per window)
-- imageloader.h/cpp: Image loading utilities
-- tray.h/cpp: System tray icon with Show submenu
+| File | Role |
+|------|------|
+| `stickercell.h/cpp` | Individual sticker widget; click → highlight, double-click → clipboard copy |
+| `categorybutton.h/cpp` | Category selector with thumbnail |
+| `custommenu.h/cpp` | Round-cornered `QMenu` + `QProxyStyle` with QSS styling |
+| `imagepreviewdialog.h/cpp` | Frameless full-size image preview |
 
-#### Widgets
+### Utilities
 
-- stickercell.h/cpp: Individual sticker widget
-- categorybutton.h/cpp: Category button widget
-- custommenu.h/cpp: Custom menu widget
-- imagepreviewdialog.h/cpp: Image preview dialog
+| File | Role |
+|------|------|
+| `log.hpp` | Thread-safe logging to `log/log.log`; level filtering, console toggle |
+| `launcher.hpp` | Open file/URL via `QDesktopServices` (async) |
+| `convertcodetostring.hpp/cpp` | Virtual key code → string mapping; hotkey comparison |
+| `globalinputlistener.h/cpp` | Win32 `WH_KEYBOARD_LL` global keyboard hook (keyboard only) |
+| `asyncthumbnailloader.h/cpp` | `QtConcurrent` + `QThreadPool` thumbnail batch loader |
 
-#### Utilities
+## assets/
 
-- log.hpp: Logging system
-- launcher.hpp: File/URL launcher
-- checkSingleInstance.hpp: Single instance check via TCP port
-- convertcodetostring.hpp/cpp: Key code to string conversion
-- globalinputlistener.h/cpp: Global input listener (managed in main)
-- asyncthumbnailloader.h/cpp: Async thumbnail loader
+- `icon.rc`: Windows resource script binding st.ico
+- `st.ico` / `st.png`: Application icon
+- `menu.qss`: QSS stylesheet for CustomMenu
 
-### assets/
+## thirdparty/stb/
 
-- icon.rc: Windows icon resource
-- st.ico: Application icon
-- st.png: Icon image
-- menu.qss: Menu stylesheet
-- window.qss: Main window stylesheet
-- window2.qss: Alternative stylesheet
+- `stb_image.h`, `stb_image_resize2.h`
 
-### thirdparty/
+## docs/.ai/
 
-- stb/: stb_image and stb_image_resize libraries
-
-### docs/.ai/
-
-AI-focused documentation
+Internal developer/AI documentation for this project. May lag behind the code; trust `AGENTS.md` and source files as truth.

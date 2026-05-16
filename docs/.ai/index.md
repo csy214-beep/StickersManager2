@@ -1,19 +1,17 @@
 # Project Index
 
-## Overview
-StickersManager - Windows Sticker Management Tool
-C++20 + Qt 6.10.1
-Windows Platform
+C++20 / Qt 6.10.1 / Windows sticker management tool.
 
-## Documentation Priority
-1. architecture.md - Project architecture and design
-2. files.md - File structure and key files
-3. config.md - Configuration system
-4. features.md - Feature implementation details
-5. changelog.md - Change history
+## Reading Order
 
-## Quick Links
-- Main Entry: src/main.cpp
-- Main Window: src/mainwindow.h, src/mainwindow.cpp
-- Config Management: src/configmanager.h, src/configmanager.cpp
-- Sticker Library: src/stickerlibrary.h, src/stickerlibrary.cpp
+1. [architecture.md](architecture.md) — Component hierarchy and execution flow
+2. [files.md](files.md) — File-by-file source map
+3. [config.md](config.md) — Config format and API
+4. [features.md](features.md) — Feature internals
+5. [changelog.md](changelog.md) — History
+
+## Entry Points
+
+- `src/main.cpp` — App entry, multi-window orchestration, hotkey wiring
+- `src/mainwindow.h/cpp` — Per-library window UI
+- `src/configmanager.h/cpp` — Config I/O and hot-reload
