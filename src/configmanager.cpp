@@ -14,12 +14,18 @@ ConfigManager::ConfigManager(QObject *parent)
     if (!loadConfig()) {
         qWarning() << "Using default configuration";
     }
-
-    migrateToMultiLibrary();
 }
 
 ConfigManager::~ConfigManager()
 {
+}
+
+bool ConfigManager::reloadFromDisk() {
+    bool ok = loadConfig();
+    if (!ok) {
+        qWarning() << "Using default configuration after reload";
+    }
+    return ok;
 }
 
 bool ConfigManager::loadConfig() {
@@ -78,23 +84,6 @@ bool ConfigManager::saveConfig() {
     return true;
 }
 
-void ConfigManager::migrateToMultiLibrary() {
-    if (!m_config.contains("libraries")) {
-        QJsonArray libraries;
-        QString oldPath = m_config["libraryPath"].toString();
-        if (!oldPath.isEmpty()) {
-            QJsonObject libObj;
-            libObj["path"] = oldPath;
-            QJsonObject shortcuts = m_config["shortcuts"].toObject();
-            libObj["hotkey"] = shortcuts["hotkey"].toString("Ctrl+Shift+E");
-            libObj["enabled"] = shortcuts["useHotkey"].toBool(true);
-            libraries.append(libObj);
-        }
-        m_config["libraries"] = libraries;
-        saveConfig();
-    }
-}
-
 QVector<LibraryConfig> ConfigManager::getLibraries() const {
     QVector<LibraryConfig> result;
     QJsonArray libArray = m_config["libraries"].toArray();
@@ -130,20 +119,17 @@ void ConfigManager::addLibrary(const LibraryConfig &lib) {
 QJsonObject ConfigManager::getDefaultConfig() {
     QJsonObject config;
 
-    config["libraryPath"] = "";
-
-    QJsonObject shortcuts;
-    shortcuts["useHotkey"] = true;
-    shortcuts["hotkey"] = "Ctrl+Shift+E";
-    config["shortcuts"] = shortcuts;
+    config["version"] = 1;
 
     QJsonArray libraries;
     config["libraries"] = libraries;
 
+    QJsonObject window;
     QJsonArray windowPos = {900, 50};
     QJsonArray windowSize = {540, 430};
-    config["windowPosition"] = windowPos;
-    config["windowSize"] = windowSize;
+    window["position"] = windowPos;
+    window["size"] = windowSize;
+    config["window"] = window;
 
     QJsonObject ui;
     ui["categoryButtonSize"] = 90;
@@ -159,45 +145,35 @@ QJsonObject ConfigManager::getDefaultConfig() {
 
     QJsonObject performance;
     performance["thumbnailCacheSize"] = 200;
-    performance["lazyLoadEnabled"] = true;
     config["performance"] = performance;
 
     return config;
 }
 
-QString ConfigManager::getLibraryPath() const {
-    auto libs = getLibraries();
-    return libs.isEmpty() ? "" : libs.first().path;
-}
-
-void ConfigManager::setLibraryPath(const QString &path) {
-    auto libs = getLibraries();
-    if (libs.isEmpty()) {
-        LibraryConfig newLib(path, "Ctrl+Shift+E", true);
-        addLibrary(newLib);
-    } else {
-        libs[0].path = path;
-        setLibraries(libs);
-    }
-}
-
-QString ConfigManager::getHotkey() const {
-    auto libs = getLibraries();
-    return libs.isEmpty() ? "Ctrl+Shift+E" : libs.first().hotkey;
-}
-
 QSize ConfigManager::getWindowSize() const {
-    QJsonArray sizeArray = m_config["windowSize"].toArray();
+    QJsonObject window = m_config["window"].toObject();
+    QJsonArray sizeArray = window["size"].toArray();
     if (sizeArray.size() == 2) {
         return QSize(sizeArray[0].toInt(), sizeArray[1].toInt());
+    }
+    // fallback: old flat format
+    QJsonArray oldSize = m_config["windowSize"].toArray();
+    if (oldSize.size() == 2) {
+        return QSize(oldSize[0].toInt(), oldSize[1].toInt());
     }
     return QSize(540, 430);
 }
 
 QPoint ConfigManager::getWindowPosition() const {
-    QJsonArray posArray = m_config["windowPosition"].toArray();
+    QJsonObject window = m_config["window"].toObject();
+    QJsonArray posArray = window["position"].toArray();
     if (posArray.size() == 2) {
         return QPoint(posArray[0].toInt(), posArray[1].toInt());
+    }
+    // fallback: old flat format
+    QJsonArray oldPos = m_config["windowPosition"].toArray();
+    if (oldPos.size() == 2) {
+        return QPoint(oldPos[0].toInt(), oldPos[1].toInt());
     }
     return QPoint(900, 50);
 }

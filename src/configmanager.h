@@ -32,15 +32,12 @@ public:
     ~ConfigManager();
 
     bool loadConfig();
+    bool reloadFromDisk();
     bool saveConfig();
 
     QVector<LibraryConfig> getLibraries() const;
     void setLibraries(const QVector<LibraryConfig> &libs);
     void addLibrary(const LibraryConfig &lib);
-
-    QString getLibraryPath() const;
-    void setLibraryPath(const QString &path);
-    QString getHotkey() const;
 
     QSize getWindowSize() const;
     QPoint getWindowPosition() const;
@@ -57,7 +54,6 @@ private:
     QString m_configPath;
 
     QJsonObject getDefaultConfig();
-    void migrateToMultiLibrary();
 };
 
 #endif // CONFIGMANAGER_H

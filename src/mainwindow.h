@@ -21,10 +21,8 @@ class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
-    explicit MainWindow(ConfigManager *config, QWidget *parent = nullptr);
-    ~MainWindow();
-
     explicit MainWindow(ConfigManager *config, const LibraryConfig &libConfig, QWidget *parent = nullptr);
+    ~MainWindow();
 
     void showWindow();
 

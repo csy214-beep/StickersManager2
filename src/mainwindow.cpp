@@ -9,36 +9,6 @@
 #include <QPushButton>
 #include "tray.h"
 
-MainWindow::MainWindow(ConfigManager *config, QWidget *parent)
-    : QMainWindow(parent)
-      , m_config(config)
-      , m_library(nullptr)
-      , m_thumbnailCache(nullptr)
-      , m_searchTimer(new QTimer(this)) {
-    m_thumbnailCache = new ThumbnailCache(m_config->getThumbnailCacheSize(), this);
-    m_library = new StickerLibrary(this);
-
-    auto libs = config->getLibraries();
-    if (!libs.isEmpty()) {
-        m_libConfig = libs.first();
-    } else {
-        m_libConfig = LibraryConfig(config->getLibraryPath(), config->getHotkey());
-    }
-
-    connect(m_thumbnailCache, &ThumbnailCache::thumbnailReady,
-            this, &MainWindow::onThumbnailLoaded);
-
-    initUI();
-    loadLibrary();
-    m_searchTimer->setSingleShot(true);
-    connect(m_searchTimer, &QTimer::timeout, this, &MainWindow::delayedSearch);
-}
-
-MainWindow::~MainWindow() {
-    delete m_thumbnailCache;
-    delete m_library;
-}
-
 MainWindow::MainWindow(ConfigManager *config, const LibraryConfig &libConfig, QWidget *parent)
     : QMainWindow(parent), m_config(config), m_library(nullptr), m_thumbnailCache(nullptr),
       m_searchTimer(new QTimer(this)), m_libConfig(libConfig) {
@@ -52,6 +22,11 @@ MainWindow::MainWindow(ConfigManager *config, const LibraryConfig &libConfig, QW
     loadLibrary();
     m_searchTimer->setSingleShot(true);
     connect(m_searchTimer, &QTimer::timeout, this, &MainWindow::delayedSearch);
+}
+
+MainWindow::~MainWindow() {
+    delete m_thumbnailCache;
+    delete m_library;
 }
 
 LibraryConfig MainWindow::getLibraryConfig() const {

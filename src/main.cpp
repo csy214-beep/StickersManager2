@@ -16,23 +16,30 @@
 
 #define DEBUG_MODE false
 
+static void rebuildHotkeyMapping(const QMap<QString, MainWindow *> &windows, QMap<QString, MainWindow *> &hotkeyToWindow) {
+    hotkeyToWindow.clear();
+    for (auto it = windows.begin(); it != windows.end(); ++it) {
+        LibraryConfig libConfig = it.value()->getLibraryConfig();
+        if (!libConfig.hotkey.isEmpty()) {
+            hotkeyToWindow[libConfig.hotkey] = it.value();
+        }
+    }
+}
+
 int main(int argc, char *argv[]) {
     initLogFile();
     setLogLevel(LogLevel::Warning);
     if (!DEBUG_MODE) qInstallMessageHandler(messageHandler);
     QApplication app(argc, argv);
     app.setApplicationName("Stickers Manager");
-    // 1. 创建锁文件对象，文件通常放在系统临时目录
     QString userName = QFileInfo(QStandardPaths::writableLocation(QStandardPaths::HomeLocation)).fileName();
     userName = !userName.isEmpty() ? userName : "unknown";
     QLockFile lockFile(QDir::temp().absoluteFilePath(QString("%1_%2.lock").arg(userName).arg(app.applicationName())));
 
-    // 2. 尝试获取锁，参数100表示最多等待100毫秒
     if (!lockFile.tryLock(100))
     {
-        // 获取锁失败，说明已有实例在运行
         QMessageBox::warning(nullptr, "Warning", "There is already an instance running!");
-        return 1; // 退出当前实例
+        return 1;
     }
     app.setQuitOnLastWindowClosed(false);
     app.setWindowIcon(QIcon(":/assets/st.png"));
@@ -42,7 +49,6 @@ int main(int argc, char *argv[]) {
 
     ConfigManager config;
 
-    // 检查是否是首次启动（没有配置的仓库）
     auto libraries = config.getLibraries();
     bool hasValidLibrary = false;
     for (const auto &lib: libraries) {
@@ -53,7 +59,6 @@ int main(int argc, char *argv[]) {
     }
 
     if (!hasValidLibrary) {
-        // 首次启动，引导用户选择表情库
         QMessageBox::information(nullptr, "Welcome to Stickers Manager",
                                  "Welcome to Stickers Manager!\n\n"
                                  "Please select your sticker library folder.\n"
@@ -63,7 +68,6 @@ int main(int argc, char *argv[]) {
                                                                 "Select Sticker Library Folder", QDir::homePath());
 
         if (!libraryPath.isEmpty()) {
-            // 添加新的表情库配置
             LibraryConfig newLib(libraryPath, "Ctrl+Shift+E", true);
             config.addLibrary(newLib);
             config.saveConfig();
@@ -75,13 +79,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // 重新加载配置的仓库
     libraries = config.getLibraries();
 
-    // 管理多个MainWindow实例
     QMap<QString, MainWindow *> windows;
 
-    // 创建每个仓库创建一个窗口
     for (const auto &lib: libraries) {
         if (!lib.enabled || lib.path.isEmpty())
             continue;
@@ -89,19 +90,15 @@ int main(int argc, char *argv[]) {
         MainWindow *window = new MainWindow(&config, lib);
         windows[lib.path] = window;
 
-        // 设置窗口标题
         QFileInfo dirInfo(lib.path);
         QString title = "Stickers Manager - " + dirInfo.fileName();
         window->setWindowTitle(title);
 
-        // 初始隐藏窗口
         window->hide();
     }
 
-    // 更新托盘菜单的Show子菜单
     TrayIcon::instance()->updateShowMenu(libraries);
 
-    // 连接托盘菜单Show子菜单的触发信号
     QObject::connect(TrayIcon::instance()->showSubMenu, &QMenu::triggered, [&](QAction *action) {
         QString libraryPath = action->data().toString();
         if (windows.contains(libraryPath)) {
@@ -114,16 +111,13 @@ int main(int argc, char *argv[]) {
         }
     });
 
-    // 托盘图标的双击显示第一个仓库窗口
-    // 使用 QPointer 自动追踪窗口生命周期
-    QPointer<MainWindow> firstWindow = windows.first();
+    QPointer<MainWindow> firstWindow = windows.isEmpty() ? nullptr : windows.first();
 
     QObject::connect(
         TrayIcon::instance(), &TrayIcon::activated,
-        [&, firstWindow](QSystemTrayIcon::ActivationReason reason) {
-            // 显式捕获 QPointer 副本
+        [&](QSystemTrayIcon::ActivationReason reason) {
             if (reason == QSystemTrayIcon::DoubleClick) {
-                if (!firstWindow) // 窗口已被删除
+                if (firstWindow.isNull())
                     return;
                 if (firstWindow->isHidden())
                     firstWindow->showWindow();
@@ -132,19 +126,11 @@ int main(int argc, char *argv[]) {
             }
         });
 
-    // 创建全局热键监听器
     GlobalInputListener *listener = new GlobalInputListener();
 
-    // 构建热键到窗口的映射
     QMap<QString, MainWindow *> hotkeyToWindow;
-    for (auto it = windows.begin(); it != windows.end(); ++it) {
-        LibraryConfig libConfig = it.value()->getLibraryConfig();
-        if (!libConfig.hotkey.isEmpty()) {
-            hotkeyToWindow[libConfig.hotkey] = it.value();
-        }
-    }
+    rebuildHotkeyMapping(windows, hotkeyToWindow);
 
-    // 连接热键信号
     if (!hotkeyToWindow.isEmpty()) {
         QObject::connect(listener, &GlobalInputListener::keyReleased, [&](int keyCode, ModifierKeys modifiers) {
             QString keyName = keyCodeToKeyString(keyCode);
@@ -172,14 +158,35 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    // 连接Rescan按钮 - 重新扫描所有仓库
     QObject::connect(TrayIcon::instance()->action_rescan, &QAction::triggered, [&]() {
-        for (auto window: windows) {
+        config.reloadFromDisk();
+        auto newLibs = config.getLibraries();
+
+        // create windows for new libraries
+        for (const auto &lib : newLibs) {
+            if (!lib.enabled || lib.path.isEmpty())
+                continue;
+            if (!windows.contains(lib.path)) {
+                MainWindow *window = new MainWindow(&config, lib);
+                windows[lib.path] = window;
+                QFileInfo dirInfo(lib.path);
+                window->setWindowTitle("Stickers Manager - " + dirInfo.fileName());
+                window->hide();
+            }
+        }
+
+        rebuildHotkeyMapping(windows, hotkeyToWindow);
+        TrayIcon::instance()->updateShowMenu(newLibs);
+
+        if (firstWindow.isNull() && !windows.isEmpty())
+            firstWindow = windows.first();
+
+        // rescan all existing windows
+        for (auto window : windows) {
             window->reloadLibrary();
         }
     });
 
-    // 连接托盘菜单的Settings和Pictures按钮
     QObject::connect(TrayIcon::instance()->action_settings, &QAction::triggered,
                      [&]() { launch(config.getConfigPath()); });
     QObject::connect(TrayIcon::instance()->action_openRepo, &QAction::triggered, [&]() {
