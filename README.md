@@ -100,3 +100,7 @@ StickersManager/
 ## License
 
 [MIT](LICENSE)
+
+---
+
+> 喜欢的话就点个star，谢谢喵~ ❤
