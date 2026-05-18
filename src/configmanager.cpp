@@ -119,8 +119,6 @@ void ConfigManager::addLibrary(const LibraryConfig &lib) {
 QJsonObject ConfigManager::getDefaultConfig() {
     QJsonObject config;
 
-    config["version"] = 1;
-
     QJsonArray libraries;
     config["libraries"] = libraries;
 
