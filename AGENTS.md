@@ -5,6 +5,7 @@
 cd build && cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug && mingw32-make
 ```
 **Required**: Qt 6.10.1 MinGW from `D:/Qt/6.10.1/mingw_64` (hardcoded in `CMakeLists.txt:16`). Adjust path for other setups.
+Build copies Qt DLLs + `plugins/` (platforms + imageformats) to output.
 
 ## Build flags
 Set at top of `CMakeLists.txt`:
@@ -13,11 +14,12 @@ Set at top of `CMakeLists.txt`:
 
 ## Key architecture
 - **Single instance**: `QLockFile` in `%TEMP%/<user>_Stickers Manager.lock` (main.cpp:37)
-- **Config**: `[EXE_DIR]/.stickersmanager/config.json` — clean JSON with `version`, `libraries[]`, `window.{position,size}`, `ui`, `behavior`, `performance`. Backward-compat reads old flat `windowPosition`/`windowSize` keys.
+- **Config**: `[EXE_DIR]/.stickersmanager/config.json` — clean JSON with `version`, `libraries[]`, `window.{position,size}`, `ui`, `behavior` (includes `animateThumbnails`/`animatePreview`, both default `false`), `performance`. Backward-compat reads old flat `windowPosition`/`windowSize` keys.
 - **Multi-window**: one `MainWindow` per enabled library; each has own `StickerLibrary` + `ThumbnailCache`
 - **Global hotkeys**: Win32 `SetWindowsHookEx(WH_KEYBOARD_LL)` via `GlobalInputListener` (keyboard only)
 - **Config hot-reload**: Rescan calls `reloadFromDisk()` → creates windows for new libraries, rebuilds hotkey map + tray menu, rescans all libraries (main.cpp:161-188)
 - **Async thumbnails**: `QtConcurrent` + `QThreadPool` via `AsyncThumbnailLoader`; LRU `QCache` in `ThumbnailCache`
+- **Animated GIF**: `QMovie` + `QBuffer` with `CacheNone` (frame-by-frame decode, no full decode). `StickerCell` only loads animation when in scroll viewport; `unloadAnimation()` releases everything (movie + buffer). `ImagePreviewDialog` async-loads via `QtConcurrent::run`. Build copies `plugins/imageformats/qgif.dll` to output. Detection: `ImageLoader::isAnimated()` uses extension + `QImageReader::imageCount()`.
 - **Image loading**: `stb_image` (primary), Qt (fallback)
 - **Tray**: `TrayIcon` singleton with per-library "Show" submenu; has hardcoded `Version = "1.6.0"` (tray.h:13)
 - **Category search**: `QLineEdit` above left sidebar filters category buttons by name

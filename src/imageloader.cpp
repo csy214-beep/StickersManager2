@@ -1,6 +1,7 @@
 #include "imageloader.h"
 #include <QFile>
 #include <QFileInfo>
+#include <QImageReader>
 #include <QDebug>
 
 #ifdef _MSC_VER
@@ -73,6 +74,14 @@ ImageLoader::Format ImageLoader::detectFormat(const QString &filePath) {
 bool ImageLoader::isFormatSupported(const QString &filePath) {
     Format format = detectFormat(filePath);
     return format != Format::Unknown;
+}
+
+bool ImageLoader::isAnimated(const QString &filePath) {
+    Format format = detectFormat(filePath);
+    if (format == Format::GIF) return true;
+
+    QImageReader reader(filePath);
+    return reader.imageCount() > 1;
 }
 
 QStringList ImageLoader::getSupportedExtensions() {

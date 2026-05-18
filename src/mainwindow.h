@@ -56,6 +56,7 @@ private:
     void showCategory(const QString &categoryName);
     void displayStickers(const QVector<QString> &stickers);
     void recalculateGridColumns();
+    void updateCellVisibility();
 
     ConfigManager *m_config;
     StickerLibrary *m_library;

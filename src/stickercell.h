@@ -4,6 +4,8 @@
 #include <QFrame>
 #include <QString>
 #include <QPixmap>
+#include <QMovie>
+#include <QFutureWatcher>
 
 class QLabel;
 
@@ -24,6 +26,9 @@ public:
     // 设置占位图（只在构造函数中调用一次）
     void setPlaceholder();
 
+    void setAnimateEnabled(bool enabled);
+    void setInViewport(bool visible);
+
 signals:
     void clicked(const QString &filePath);
 
@@ -39,12 +44,19 @@ protected:
     void resizeEvent(QResizeEvent *event) override; // 添加重绘事件
 
 private:
+    void loadAnimation();
+    void unloadAnimation();
+
     QString m_filePath;
     QLabel *m_imageLabel;
     bool m_isHighlighted;
     int m_cellSize;
     QPixmap m_currentPixmap; // 保存当前图片
     bool m_hasRealThumbnail; // 标记是否有真实缩略图
+    bool m_animateEnabled = false;
+    bool m_inViewport = true;
+    QMovie *m_movie = nullptr;
+    QFutureWatcher<QByteArray> *m_animWatcher = nullptr;
 };
 
 #endif // STICKERCELL_H

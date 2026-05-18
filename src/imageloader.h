@@ -15,6 +15,7 @@ public:
 
     static QImage loadImage(const QString &filePath);
     static bool isFormatSupported(const QString &filePath);
+    static bool isAnimated(const QString &filePath);
     static QStringList getSupportedExtensions();
 
 private:

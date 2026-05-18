@@ -47,6 +47,9 @@ public:
     int getGridColumns() const;
     int getThumbnailCacheSize() const;
 
+    bool animateThumbnails() const;
+    bool animatePreview() const;
+
     QString getConfigPath() const;
 
 private:

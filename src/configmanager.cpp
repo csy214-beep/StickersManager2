@@ -141,6 +141,8 @@ QJsonObject ConfigManager::getDefaultConfig() {
     behavior["copyOnDoubleClick"] = true;
     behavior["highlightOnClick"] = true;
     behavior["searchDelayMs"] = 300;
+    behavior["animateThumbnails"] = false;
+    behavior["animatePreview"] = false;
     config["behavior"] = behavior;
 
     QJsonObject performance;
@@ -196,6 +198,16 @@ int ConfigManager::getGridColumns() const {
 int ConfigManager::getThumbnailCacheSize() const {
     QJsonObject performance = m_config["performance"].toObject();
     return performance["thumbnailCacheSize"].toInt(200);
+}
+
+bool ConfigManager::animateThumbnails() const {
+    QJsonObject behavior = m_config["behavior"].toObject();
+    return behavior["animateThumbnails"].toBool(false);
+}
+
+bool ConfigManager::animatePreview() const {
+    QJsonObject behavior = m_config["behavior"].toObject();
+    return behavior["animatePreview"].toBool(false);
 }
 
 QString ConfigManager::getConfigPath() const {

@@ -6,7 +6,7 @@
 #include <QCloseEvent>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-
+#include <QScrollBar>
 #include "tray.h"
 
 MainWindow::MainWindow(ConfigManager *config, const LibraryConfig &libConfig, QWidget *parent)
@@ -104,6 +104,8 @@ QWidget *MainWindow::createStickerPanel() {
     m_gridLayout->setAlignment(Qt::AlignTop | Qt::AlignLeft);
     m_gridLayout->setContentsMargins(5, 5, 5, 5);
     m_stickerScroll->setWidget(m_stickerContainer);
+    connect(m_stickerScroll->verticalScrollBar(), &QScrollBar::valueChanged,
+            this, &MainWindow::updateCellVisibility);
     layout->addWidget(m_stickerScroll);
 
     return panel;
@@ -170,6 +172,7 @@ void MainWindow::showCategory(const QString &categoryName) {
     m_categorySearchInput->clear();
 
     displayStickers(m_library->getCategories().value(categoryName));
+    QTimer::singleShot(0, this, &MainWindow::updateCellVisibility);
 }
 
 void MainWindow::displayStickers(const QVector<QString> &stickers)
@@ -202,6 +205,7 @@ void MainWindow::displayStickers(const QVector<QString> &stickers)
         int col = i % columns;
 
         StickerCell *cell = new StickerCell(stickerPath, cellSize);
+        cell->setAnimateEnabled(m_config->animateThumbnails());
         connect(cell, &StickerCell::clicked, this, &MainWindow::onStickerClicked);
         connect(cell, &StickerCell::doubleClicked, this, &MainWindow::onStickerDoubleClicked);
         connect(cell, &StickerCell::rightClicked, this, &MainWindow::onStickerRightClicked);
@@ -288,6 +292,7 @@ void MainWindow::performSearch() {
         return;
     }
     displayStickers(m_library->searchStickers(keyword));
+    QTimer::singleShot(0, this, &MainWindow::updateCellVisibility);
 }
 
 void MainWindow::onSearchTextChanged(const QString &text) {
@@ -339,7 +344,7 @@ void MainWindow::onStickerRightClicked(const QString &filePath)
         currentPreview->accept();
         currentPreview = nullptr;
     } else {
-        currentPreview = new ImagePreviewDialog(filePath, this);
+        currentPreview = new ImagePreviewDialog(filePath, m_config->animatePreview(), this);
         connect(currentPreview, &ImagePreviewDialog::finished, [&]() { currentPreview = nullptr; });
         currentPreview->show();
     }
@@ -353,9 +358,19 @@ void MainWindow::delayedSearch() {
     performSearch();
 }
 
+void MainWindow::updateCellVisibility() {
+    if (!m_stickerScroll) return;
+    QRect viewportRect = m_stickerScroll->viewport()->rect();
+    for (StickerCell *cell : m_currentCells) {
+        QRect cellRect(cell->mapTo(m_stickerScroll->viewport(), QPoint(0, 0)), cell->size());
+        cell->setInViewport(viewportRect.intersects(cellRect));
+    }
+}
+
 void MainWindow::resizeEvent(QResizeEvent *event) {
     QMainWindow::resizeEvent(event);
     recalculateGridColumns();
+    updateCellVisibility();
 }
 
 void MainWindow::recalculateGridColumns() {

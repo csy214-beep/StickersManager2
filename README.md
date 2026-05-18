@@ -10,47 +10,25 @@ StickersManager
 
 ## Overview
 
-StickersManager is a Windows Sticker Management Tool built with C++20 and Qt 6.10.1. It provides a user-friendly interface for managing and using sticker packs from local folders.
+StickersManager is a Windows sticker management tool built with C++20 and Qt 6.10.1. It manages sticker packs from local folders.
 
 ![img.png](GitHub/img.png)
 
 ## Features
 
-- **Multi-Window Support**: One window per enabled sticker library
-- **Global Hotkeys**: Customizable shortcuts to open/close windows
-- **Local Library**: Use local folders as sticker libraries, with subdirectories as categories
-- **Search Functionality**: Search stickers by file name; search categories by name
-- **Easy Copy**: Double-click to copy stickers to clipboard
-- **Image Preview**: Right-click to preview full-size images
-- **Responsive Layout**: Adapts to window size while respecting configuration
-- **First-Time Setup**: Guided library selection for new users
-- **Hot-Reload**: Rescan button reloads config and picks up new libraries at runtime
-
-## Project Structure
-
-```txt
-StickersManager/
-├── CMakeLists.txt
-├── resources.qrc
-├── assets/
-│   ├── icon.rc
-│   ├── menu.qss
-│   ├── st.ico
-│   └── st.png
-├── src/             # all source files
-├── thirdparty/
-│   └── stb/         # stb_image, stb_image_resize2
-└── docs/.ai/        # internal dev docs
-```
-
-## Third-Party Libraries
-
-- [Qt 6.10.1](https://www.qt.io/)
-- [stb_image](https://github.com/nothings/stb)
+- **Multi-window** — one window per library
+- **Global hotkeys** — customizable shortcuts per library
+- **Local folders** — subdirectories become categories
+- **Search** — search stickers by filename, categories by name
+- **Copy** — double-click to copy to clipboard
+- **Preview** — right-click for full-size view
+- **Hot-reload** — rescan picks up config/library changes at runtime
+- **Animated GIF** — optional, controlled by config (default off)
+- **First-time setup** — guided library selection
 
 ## Config
 
-Config file at `[EXE_DIR]/.stickersmanager/config.json`:
+File: `[EXE_DIR]/.stickersmanager/config.json`
 
 ```json
 {
@@ -60,11 +38,6 @@ Config file at `[EXE_DIR]/.stickersmanager/config.json`:
             "enabled": true,
             "hotkey": "Ctrl+Shift+E",
             "path": "D:/stickers/anime"
-        },
-        {
-            "enabled": true,
-            "hotkey": "Ctrl+Shift+A",
-            "path": "D:/stickers/emotes"
         }
     ],
     "ui": {
@@ -75,7 +48,9 @@ Config file at `[EXE_DIR]/.stickersmanager/config.json`:
     "behavior": {
         "copyOnDoubleClick": true,
         "highlightOnClick": true,
-        "searchDelayMs": 300
+        "searchDelayMs": 300,
+        "animateThumbnails": false,
+        "animatePreview": false
     },
     "performance": {
         "thumbnailCacheSize": 200
@@ -86,6 +61,41 @@ Config file at `[EXE_DIR]/.stickersmanager/config.json`:
     }
 }
 ```
+
+| Key | Description |
+|---|---|
+| `libraries[].path` | Path to sticker library folder |
+| `libraries[].hotkey` | Global hotkey, e.g. `Ctrl+Shift+E` |
+| `libraries[].enabled` | Show/hide this library |
+| `ui.categoryButtonSize` | Category thumbnail size in px |
+| `ui.gridCellSize` | Sticker cell size in px |
+| `ui.gridColumns` | Minimum column count |
+| `behavior.copyOnDoubleClick` | Copy sticker file on double-click |
+| `behavior.highlightOnClick` | Highlight selected cell |
+| `behavior.searchDelayMs` | Debounce delay for search input |
+| `behavior.animateThumbnails` | Play GIF animation in grid cells |
+| `behavior.animatePreview` | Play GIF animation in preview dialog |
+| `performance.thumbnailCacheSize` | Max cached thumbnails |
+| `window.position` | Window position `[x, y]` |
+| `window.size` | Window size `[width, height]` |
+
+## Project Structure
+
+```txt
+StickersManager/
+├── CMakeLists.txt
+├── resources.qrc
+├── assets/            # icons, stylesheet, icon.rc
+├── src/               # all source files
+├── thirdparty/
+│   └── stb/           # stb_image, stb_image_resize2
+└── docs/.ai/          # internal dev docs
+```
+
+## Third-Party Libraries
+
+- [Qt 6.10.1](https://www.qt.io/)
+- [stb_image](https://github.com/nothings/stb)
 
 ## License
 

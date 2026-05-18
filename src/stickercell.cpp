@@ -12,7 +12,10 @@
 #include <QClipboard>
 #include <QMimeData>
 #include <QTimer>
+#include <QBuffer>
+#include <QtConcurrent>
 #include "tray.h"
+#include "imageloader.h"
 
 StickerCell::StickerCell(const QString &filePath, int cellSize, QWidget *parent)
     : QFrame(parent)
@@ -40,7 +43,12 @@ StickerCell::StickerCell(const QString &filePath, int cellSize, QWidget *parent)
 }
 
 StickerCell::~StickerCell() {
-    // 清理资源
+    if (m_animWatcher) {
+        m_animWatcher->cancel();
+    }
+    if (m_movie) {
+        m_movie->stop();
+    }
 }
 
 void StickerCell::setThumbnail(const QPixmap &pixmap) {
@@ -62,6 +70,10 @@ void StickerCell::setThumbnail(const QPixmap &pixmap) {
 
     m_imageLabel->setPixmap(scaledPixmap);
 
+    if (m_animateEnabled && ImageLoader::isAnimated(m_filePath) && m_inViewport) {
+        loadAnimation();
+    }
+
     // 强制更新显示
     m_imageLabel->update();
     update();
@@ -77,6 +89,75 @@ void StickerCell::setPlaceholder() {
     m_imageLabel->clear();
     m_imageLabel->setText("..."); // 或者显示加载中
     m_hasRealThumbnail = false;
+}
+
+void StickerCell::loadAnimation() {
+    if (m_animWatcher || m_movie) return;
+
+    QString filePath = m_filePath;
+    m_animWatcher = new QFutureWatcher<QByteArray>(this);
+    connect(m_animWatcher, &QFutureWatcher<QByteArray>::finished, this, [this]() {
+        if (!m_animWatcher || m_animWatcher->isCanceled()) return;
+        QByteArray data = m_animWatcher->result();
+        m_animWatcher->deleteLater();
+        m_animWatcher = nullptr;
+        if (data.isEmpty() || !m_inViewport) {
+            // 不可见则不创建 QMovie，丢弃数据
+            return;
+        }
+        auto *buffer = new QBuffer();
+        buffer->setData(data);
+        m_movie = new QMovie(buffer);
+        // 默认 CacheNone — 只保留当前帧，不缓存全部帧到内存
+        buffer->setParent(m_movie);
+        connect(m_movie, &QMovie::frameChanged, this, [this](int) {
+            if (!m_movie) return;
+            QPixmap framePix = m_movie->currentPixmap();
+            if (framePix.isNull()) return;
+            QSize labelSize = m_imageLabel->size();
+            if (labelSize.isEmpty()) return;
+            m_imageLabel->setPixmap(framePix.scaled(
+                labelSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        });
+        m_movie->start();
+    });
+    m_animWatcher->setFuture(QtConcurrent::run([filePath]() -> QByteArray {
+        QFile file(filePath);
+        if (!file.open(QIODevice::ReadOnly)) return {};
+        return file.readAll();
+    }));
+}
+
+void StickerCell::unloadAnimation() {
+    if (m_animWatcher) {
+        m_animWatcher->cancel();
+        delete m_animWatcher;
+        m_animWatcher = nullptr;
+    }
+    if (m_movie) {
+        m_movie->stop();
+        delete m_movie;
+        m_movie = nullptr;
+    }
+}
+
+void StickerCell::setAnimateEnabled(bool enabled) {
+    m_animateEnabled = enabled;
+    if (!enabled) {
+        unloadAnimation();
+    }
+}
+
+void StickerCell::setInViewport(bool visible) {
+    if (m_inViewport == visible) return;
+    m_inViewport = visible;
+    if (visible && m_animateEnabled) {
+        if (ImageLoader::isAnimated(m_filePath)) {
+            loadAnimation();
+        }
+    } else {
+        unloadAnimation();
+    }
 }
 
 void StickerCell::clearHighlight() {
@@ -172,14 +253,19 @@ void StickerCell::mouseDoubleClickEvent(QMouseEvent *event) {
 void StickerCell::resizeEvent(QResizeEvent *event) {
     QFrame::resizeEvent(event);
 
-    // 如果有真实缩略图，重新设置一次以确保正确显示
-    if (m_hasRealThumbnail && !m_currentPixmap.isNull()) {
-        QSize labelSize = m_imageLabel->size();
-        QPixmap scaledPixmap = m_currentPixmap.scaled(
+    QSize labelSize = m_imageLabel->size();
+
+    if (m_movie && m_movie->state() == QMovie::Running) {
+        QPixmap framePix = m_movie->currentPixmap();
+        if (!framePix.isNull()) {
+            m_imageLabel->setPixmap(framePix.scaled(
+                labelSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
+        }
+    } else if (m_hasRealThumbnail && !m_currentPixmap.isNull()) {
+        m_imageLabel->setPixmap(m_currentPixmap.scaled(
             labelSize,
             Qt::KeepAspectRatio,
             Qt::SmoothTransformation
-        );
-        m_imageLabel->setPixmap(scaledPixmap);
+        ));
     }
 }
