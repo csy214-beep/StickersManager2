@@ -6,7 +6,7 @@
 #include <QCloseEvent>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
-#include <QPushButton>
+
 #include "tray.h"
 
 MainWindow::MainWindow(ConfigManager *config, const LibraryConfig &libConfig, QWidget *parent)
@@ -88,18 +88,11 @@ QWidget *MainWindow::createStickerPanel() {
     QVBoxLayout *layout = new QVBoxLayout(panel);
     layout->setContentsMargins(0, 0, 0, 0);
 
-    QWidget *searchWidget = new QWidget();
-    QHBoxLayout *searchLayout = new QHBoxLayout(searchWidget);
     m_searchInput = new QLineEdit();
     m_searchInput->setPlaceholderText("Search...");
+    m_searchInput->setClearButtonEnabled(true);
     connect(m_searchInput, &QLineEdit::textChanged, this, &MainWindow::onSearchTextChanged);
-    QPushButton *clearButton = new QPushButton("✕");
-    clearButton->setToolTip("Clear");
-    clearButton->setFixedWidth(30);
-    connect(clearButton, &QPushButton::clicked, m_searchInput, &QLineEdit::clear);
-    searchLayout->addWidget(m_searchInput);
-    searchLayout->addWidget(clearButton);
-    layout->addWidget(searchWidget);
+    layout->addWidget(m_searchInput);
 
     m_stickerScroll = new QScrollArea();
     m_stickerScroll->setWidgetResizable(true);
