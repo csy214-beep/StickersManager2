@@ -5,7 +5,7 @@
 #define MyAppName "StickersManager"
 #define MyAppVersion "1.7.0"
 #define MyAppPublisher "SY Cheng"
-#define MyAppURL "https://github.com/csy214-beep/StickersManager2"
+#define MyAppURL "https://github.com/igugyj/StickersManager2"
 #define MyAppExeName "StickersManager.exe"
 
 [Setup]

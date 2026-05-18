@@ -62,7 +62,7 @@ TrayIcon::TrayIcon(QObject *parent)
         launch(appDir); });
     connect(openGithubAction, &QAction::triggered, []()
             {
-        QString githubUrl = "https://github.com/csy214-beep/StickersManager2";
+        QString githubUrl = "https://github.com/igugyj/StickersManager2";
         launch(githubUrl); });
 
     menu->addMenu(showSubMenu);
