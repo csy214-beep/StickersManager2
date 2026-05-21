@@ -49,6 +49,7 @@ private:
 
     QString m_filePath;
     QLabel *m_imageLabel;
+    QLabel *m_tagLabel;
     bool m_isHighlighted;
     int m_cellSize;
     QPixmap m_currentPixmap; // 保存当前图片

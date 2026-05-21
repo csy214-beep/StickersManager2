@@ -38,6 +38,22 @@ StickerCell::StickerCell(const QString &filePath, int cellSize, QWidget *parent)
     layout->setSpacing(0);
     layout->addWidget(m_imageLabel);
 
+    // 文件类型标签（左下角覆盖）
+    QFileInfo fi(m_filePath);
+    m_tagLabel = new QLabel(fi.suffix().toUpper(), this);
+    m_tagLabel->setStyleSheet(
+        "QLabel {"
+        "  background-color: rgba(0, 0, 0, 150);"
+        "  color: #ffffff;"
+        "  padding: 1px 5px;"
+        "  font-size: 10px;"
+        "  border-radius: 3px;"
+        "}"
+    );
+    m_tagLabel->adjustSize();
+    m_tagLabel->move(7, cellSize - m_tagLabel->height() - 7);
+    m_tagLabel->hide();
+
     // 初始设置为占位图
     setPlaceholder();
 }
@@ -69,6 +85,7 @@ void StickerCell::setThumbnail(const QPixmap &pixmap) {
     );
 
     m_imageLabel->setPixmap(scaledPixmap);
+    m_tagLabel->show();
 
     if (m_animateEnabled && ImageLoader::isAnimated(m_filePath) && m_inViewport) {
         loadAnimation();
@@ -88,6 +105,7 @@ void StickerCell::setPlaceholder() {
     // m_imageLabel->setPixmap(placeholder);
     m_imageLabel->clear();
     m_imageLabel->setText("..."); // 或者显示加载中
+    m_tagLabel->hide();
     m_hasRealThumbnail = false;
 }
 
