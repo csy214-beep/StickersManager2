@@ -206,6 +206,7 @@ void MainWindow::displayStickers(const QVector<QString> &stickers)
 
         StickerCell *cell = new StickerCell(stickerPath, cellSize);
         cell->setAnimateEnabled(m_config->animateThumbnails());
+        cell->setShowTag(m_config->showFileTypeTag());
         connect(cell, &StickerCell::clicked, this, &MainWindow::onStickerClicked);
         connect(cell, &StickerCell::doubleClicked, this, &MainWindow::onStickerDoubleClicked);
         connect(cell, &StickerCell::rightClicked, this, &MainWindow::onStickerRightClicked);

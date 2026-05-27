@@ -49,6 +49,7 @@ public:
 
     bool animateThumbnails() const;
     bool animatePreview() const;
+    bool showFileTypeTag() const;
 
     QString getConfigPath() const;
 

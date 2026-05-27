@@ -85,7 +85,7 @@ void StickerCell::setThumbnail(const QPixmap &pixmap) {
     );
 
     m_imageLabel->setPixmap(scaledPixmap);
-    m_tagLabel->show();
+    if (m_showTag) m_tagLabel->show();
 
     if (m_animateEnabled && ImageLoader::isAnimated(m_filePath) && m_inViewport) {
         loadAnimation();
@@ -175,6 +175,15 @@ void StickerCell::setInViewport(bool visible) {
         }
     } else {
         unloadAnimation();
+    }
+}
+
+void StickerCell::setShowTag(bool show) {
+    m_showTag = show;
+    if (show && m_hasRealThumbnail) {
+        m_tagLabel->show();
+    } else {
+        m_tagLabel->hide();
     }
 }
 

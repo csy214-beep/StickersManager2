@@ -141,6 +141,7 @@ QJsonObject ConfigManager::getDefaultConfig() {
     behavior["searchDelayMs"] = 300;
     behavior["animateThumbnails"] = false;
     behavior["animatePreview"] = false;
+    behavior["showFileTypeTag"] = true;
     config["behavior"] = behavior;
 
     QJsonObject performance;
@@ -206,6 +207,11 @@ bool ConfigManager::animateThumbnails() const {
 bool ConfigManager::animatePreview() const {
     QJsonObject behavior = m_config["behavior"].toObject();
     return behavior["animatePreview"].toBool(false);
+}
+
+bool ConfigManager::showFileTypeTag() const {
+    QJsonObject behavior = m_config["behavior"].toObject();
+    return behavior["showFileTypeTag"].toBool(true);
 }
 
 QString ConfigManager::getConfigPath() const {

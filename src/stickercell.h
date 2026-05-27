@@ -28,6 +28,7 @@ public:
 
     void setAnimateEnabled(bool enabled);
     void setInViewport(bool visible);
+    void setShowTag(bool show);
 
 signals:
     void clicked(const QString &filePath);
@@ -56,6 +57,7 @@ private:
     bool m_hasRealThumbnail; // 标记是否有真实缩略图
     bool m_animateEnabled = false;
     bool m_inViewport = true;
+    bool m_showTag = true;
     QMovie *m_movie = nullptr;
     QFutureWatcher<QByteArray> *m_animWatcher = nullptr;
 };

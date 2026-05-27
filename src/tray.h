@@ -10,7 +10,7 @@ class TrayIcon : public QSystemTrayIcon {
     Q_OBJECT
 
 public:
-    QString Version = "1.7.0";
+    QString Version = "1.8.0";
 
     TrayIcon(const TrayIcon &) = delete;
     TrayIcon &operator=(const TrayIcon &) = delete;
