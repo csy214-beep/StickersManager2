@@ -12,7 +12,7 @@ StickersManager
 
 StickersManager is a Windows sticker management tool built with C++20 and Qt 6.10.1. It manages sticker packs from local folders.
 
-![alt text](GitHub/img.gif)
+<video controls src="GitHub/preview.mp4" title="Title"></video>
 
 ## Features
 
