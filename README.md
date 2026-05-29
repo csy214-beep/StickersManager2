@@ -12,7 +12,7 @@ StickersManager
 
 StickersManager is a Windows sticker management tool built with C++20 and Qt 6.10.1. It manages sticker packs from local folders.
 
-![img.png](GitHub/img.png)
+![alt text](GitHub/img.gif)
 
 ## Features
 
@@ -50,7 +50,8 @@ File: `[EXE_DIR]/.stickersmanager/config.json`
         "highlightOnClick": true,
         "searchDelayMs": 300,
         "animateThumbnails": false,
-        "animatePreview": false
+        "animatePreview": false,
+        "showFileTypeTag": true
     },
     "performance": {
         "thumbnailCacheSize": 200
@@ -75,6 +76,7 @@ File: `[EXE_DIR]/.stickersmanager/config.json`
 | `behavior.searchDelayMs` | Debounce delay for search input |
 | `behavior.animateThumbnails` | Play GIF animation in grid cells |
 | `behavior.animatePreview` | Play GIF animation in preview dialog |
+| `behavior.showFileTypeTag` | Show file extension label on thumbnail cells |
 | `performance.thumbnailCacheSize` | Max cached thumbnails |
 | `window.position` | Window position `[x, y]` |
 | `window.size` | Window size `[width, height]` |

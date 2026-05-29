@@ -3,7 +3,7 @@
 ; Non-commercial use only
 
 #define MyAppName "StickersManager"
-#define MyAppVersion "1.7.0"
+#define MyAppVersion "1.8.0"
 #define MyAppPublisher "SY Cheng"
 #define MyAppURL "https://github.com/igugyj/StickersManager2"
 #define MyAppExeName "StickersManager.exe"
@@ -39,7 +39,7 @@ InfoBeforeFile=D:\programing\Cpp\StickersManager\README.md
 ;PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 OutputDir=D:\programing\Cpp\StickersManager
-OutputBaseFilename=StickersManager_1.7.0
+OutputBaseFilename=StickersManager_1.8.0
 SetupIconFile=D:\programing\Cpp\StickersManager\assets\st.ico
 SolidCompression=yes
 WizardStyle=modern dynamic windows11
