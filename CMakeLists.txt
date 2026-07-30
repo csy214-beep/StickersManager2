@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.5)
 project(StickersManager)
 # ------------------
 # 设置是否为debug模式
@@ -28,14 +28,17 @@ find_package(Qt6 COMPONENTS
         Widgets
         Concurrent
         REQUIRED)
-FILE(GLOB SOURCE_FILES "./src/*.cpp")
-FILE(GLOB HEADER_FILES "./src/*.h")
-FILE(GLOB HPP_FILES "./src/*.hpp")
+FILE(GLOB_RECURSE SOURCE_FILES "./src/*.cpp")
+FILE(GLOB_RECURSE HEADER_FILES "./src/*.h")
+FILE(GLOB_RECURSE HPP_FILES "./src/*.hpp")
 
 # 头文件搜索路径
 include_directories(
         ./
         src/
+        src/core/
+        src/ui/
+        src/utils/
         thirdparty/stb
 )
 # 资源文件
@@ -46,13 +49,6 @@ set(RESOURCE_FILES
 if (NOT CONSOLE)
     set(CON WIN32)
 endif ()
-# 明确设置 UI 文件目录
-set(UI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src/ui")
-
-include_directories(${PROJECT_NAME} PRIVATE
-        ${UI_DIR}
-        ${CMAKE_CURRENT_BINARY_DIR}  # 重要：包含构建目录，ui_*.h文件在这里生成
-)
 
 add_executable(${PROJECT_NAME}
         ${CON}
@@ -70,6 +66,10 @@ target_link_libraries(${PROJECT_NAME}
 # 设置包含目录
 target_include_directories(${PROJECT_NAME} PRIVATE
         src
+        src/core/
+        src/ui/
+        src/utils/
+        ${CMAKE_CURRENT_BINARY_DIR}
         ${THIRDPARTY_DIR}/stb
 )
 # 设置图标（Windows）

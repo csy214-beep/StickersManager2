@@ -31,8 +31,21 @@ Build flags (top of `CMakeLists.txt`):
 - **QLabel overlay** with extension (uppercase), positioned absolutely: `move(7, cellSize - tagHeight - 7)` in constructor. Not in layout — does not affect image centering.
 - **Visibility**: tag hidden during placeholder, shown only after real thumbnail set; `setShowTag()` controls via config.
 
+## Directory layout
+```
+src/
+├── main.cpp
+├── core/           # config, library, image loading, cache, input
+├── ui/             # all UI widgets (mainwindow, tray, dialogs, cells)
+└── utils/          # log.hpp, launcher.hpp
+assets/            # icons, QSS stylesheet (menu.qss), icon.rc
+thirdparty/stb/    # stb_image.h, stb_image_resize2.h
+GitHub/            # README screenshots
+docs/.ai/          # architecture/design docs (may be stale)
+```
+
 ## Conventions
-- **All source globbed**: `FILE(GLOB *.cpp *.h *.hpp ./src/)` — no need to register new files in CMake
+- **All source globbed recursively**: `FILE(GLOB_RECURSE *.cpp *.h *.hpp ./src/)` — put new files in the right subdirectory, no need to register in CMake
 - **No `.ui` files**: `AUTOUIC ON` but unused; all UI in C++ code
 - **Qt auto**: `CMAKE_AUTOMOC`, `AUTORCC`, `AUTOUIC` are ON
 - **Style**: Fusion set at `main.cpp:48` via `QStyleFactory`
