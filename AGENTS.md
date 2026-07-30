@@ -59,7 +59,7 @@ thirdparty/stb/        # stb_image.h, stb_image_resize2.h
 - **No `.ui` files**: `AUTOUIC ON` but all UI in C++ code; `CMAKE_AUTOMOC` + `AUTORCC` also ON
 - **Style**: Fusion (`main.cpp:52-53`)
 - **DEBUG_MODE**: `#define DEBUG_MODE false` in `main.cpp:22`; set to `true` to see `qDebug()` in console
-- **Version**: `appinfo.h:7` — `AppInfo::version()` returns `"2.0.0"`, manual bump only on release
+- **Version**: `appinfo.h:7` — `AppInfo::version()` returns `"2.0.1"`, manual bump only on release
 - **About page**: version comparison strips `v` prefix, parses `major.minor.patch` numerically; update check hits GitHub API (`apiReleasesUrl()`)
 - **Header-only utils**: `static` functions in `log.hpp` and `launcher.hpp` (one copy per TU). `launch()` opens paths/URLs via `QtConcurrent::run` + `QDesktopServices`.
 - **No tests / CI / linters**; packaging via `pkg.iss` (Inno Setup)

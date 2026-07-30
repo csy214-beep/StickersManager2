@@ -16,6 +16,7 @@
 #include <QDir>
 #include <QDirIterator>
 #include <QCoreApplication>
+#include <QScrollArea>
 
 QString AboutPage::formatSize(qint64 bytes) {
     if (bytes < 1024) return QString::number(bytes) + " B";
@@ -55,6 +56,14 @@ AboutPage::AboutPage(ConfigManager *config, QWidget *parent)
     : QWidget(parent), m_config(config)
 {
     auto *root = new QVBoxLayout(this);
+    root->setContentsMargins(0, 0, 0, 0);
+
+    auto *scrollArea = new QScrollArea(this);
+    scrollArea->setWidgetResizable(true);
+    scrollArea->setFrameShape(QFrame::NoFrame);
+
+    auto *content = new QWidget();
+    auto *contentLayout = new QVBoxLayout(content);
 
     auto *infoGroup = new QGroupBox("Application");
     auto *infoForm = new QFormLayout(infoGroup);
@@ -74,7 +83,7 @@ AboutPage::AboutPage(ConfigManager *config, QWidget *parent)
     connect(issuesLink, &QLabel::linkActivated, []() { launch(AppInfo::issuesUrl()); });
     infoForm->addRow("Feedback:", issuesLink);
 
-    root->addWidget(infoGroup);
+    contentLayout->addWidget(infoGroup);
 
     // Paths
     auto *pathsGroup = new QGroupBox("Paths");
@@ -96,7 +105,7 @@ AboutPage::AboutPage(ConfigManager *config, QWidget *parent)
     connect(cfgLink, &QLabel::linkActivated, this, [cfgDir]() { launch(cfgDir); });
     pathsForm->addRow("Config folder:", cfgLink);
 
-    root->addWidget(pathsGroup);
+    contentLayout->addWidget(pathsGroup);
 
     // Storage
     auto *storageGroup = new QGroupBox("Storage");
@@ -114,7 +123,7 @@ AboutPage::AboutPage(ConfigManager *config, QWidget *parent)
     m_storageLabel = new QLabel(formatSize(libBytes), this);
     storageForm->addRow("Library files:", m_storageLabel);
 
-    root->addWidget(storageGroup);
+    contentLayout->addWidget(storageGroup);
 
     // Update
     auto *updateGroup = new QGroupBox("Update");
@@ -126,11 +135,13 @@ AboutPage::AboutPage(ConfigManager *config, QWidget *parent)
 
     updateLayout->addWidget(m_checkUpdateBtn);
     updateLayout->addWidget(m_statusLabel);
-    root->addWidget(updateGroup);
+    contentLayout->addWidget(updateGroup);
+    contentLayout->addStretch();
+
+    scrollArea->setWidget(content);
+    root->addWidget(scrollArea);
 
     connect(m_checkUpdateBtn, &QPushButton::clicked, this, &AboutPage::checkForUpdates);
-
-    root->addStretch();
 }
 
 void AboutPage::checkForUpdates() {

@@ -1,4 +1,4 @@
-# Changelog — v1.8.0 → v2.0.0
+# Changelog — v1.8.0 → v2.0.1
 
 ### Config system (breaking)
 - Config v2: flat structure → `{"default":{...},"libraries":[{...,"settings":{}}]}`
@@ -26,7 +26,7 @@
 
 ### Application info (new: `src/appinfo.h`)
 - Inline namespace `AppInfo` — single source for `version()`, `author()`, `license()`, `repoUrl()`, `issuesUrl()`, `apiReleasesUrl()`
-- `"2.0.0"`, `"igugyj"`, `"MIT"`
+- `"2.0.1"`, `"igugyj"`, `"MIT"`
 
 ### First-launch flow (changed)
 - Before: `QFileDialog::getExistingDirectory` → save to config
