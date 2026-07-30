@@ -2,6 +2,7 @@
 #include <QIcon>
 #include <QDebug>
 #include <QResizeEvent>
+#include <QStyle>
 
 CategoryButton::CategoryButton(const QString &categoryName,
                                const QString &firstStickerPath,
@@ -15,21 +16,28 @@ CategoryButton::CategoryButton(const QString &categoryName,
     setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     setToolTip(categoryName);
 
-    setStyleSheet(R"(
+    QColor bg = palette().color(QPalette::Button);
+    QColor hl = palette().color(QPalette::Highlight);
+
+    setStyleSheet(QString(R"(
         CategoryButton {
-            background-color: #ffffff;
-            border: 2px solid #e0e0e0;
+            background-color: %1;
+            border: 2px solid %2;
             border-radius: 8px;
         }
         CategoryButton:hover {
-            border: 2px solid #409eff;
-            background-color: #e8f4f8;
+            border: 2px solid %3;
+            background-color: %4;
         }
         CategoryButton:pressed {
-            background-color: #409eff;
-            border: 2px solid #409eff;
+            background-color: %3;
+            border: 2px solid %3;
         }
-    )");
+    )")
+        .arg(bg.name())
+        .arg(bg.darker(130).name())
+        .arg(hl.name())
+        .arg(hl.lighter(185).name()));
 }
 
 void CategoryButton::setThumbnail(const QPixmap &pixmap)

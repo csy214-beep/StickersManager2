@@ -1,0 +1,140 @@
+#include "generalsettingspage.h"
+#include "configmanager.h"
+
+#include <QSpinBox>
+#include <QCheckBox>
+#include <QFormLayout>
+#include <QVBoxLayout>
+#include <QGroupBox>
+#include <QPushButton>
+#include <QScrollArea>
+#include <QJsonObject>
+
+static QSpinBox *makeSpinBox(int min, int max, int val, QWidget *parent) {
+    auto *sb = new QSpinBox(parent);
+    sb->setRange(min, max);
+    sb->setValue(val);
+    return sb;
+}
+
+GeneralSettingsPage::GeneralSettingsPage(ConfigManager *config, QWidget *parent)
+    : QWidget(parent), m_config(config)
+{
+    auto *root = new QVBoxLayout(this);
+
+    auto *scrollArea = new QScrollArea;
+    scrollArea->setWidgetResizable(true);
+
+    auto *content = new QWidget;
+    auto *contentLayout = new QVBoxLayout(content);
+
+    // --- UI ---
+    auto *uiGroup = new QGroupBox("UI");
+    auto *uiForm = new QFormLayout(uiGroup);
+    m_categoryButtonSize = makeSpinBox(30, 300, config->getCategoryButtonSize(), this);
+    m_gridCellSize = makeSpinBox(40, 400, config->getGridCellSize(), this);
+    uiForm->addRow("Category Button Size:", m_categoryButtonSize);
+    uiForm->addRow("Grid Cell Size:", m_gridCellSize);
+    contentLayout->addWidget(uiGroup);
+
+    // --- Behavior ---
+    auto *bhvGroup = new QGroupBox("Behavior");
+    auto *bhvForm = new QFormLayout(bhvGroup);
+    m_copyOnDblClick = new QCheckBox(this);
+    m_copyOnDblClick->setChecked(config->copyOnDoubleClick());
+    m_highlightOnClick = new QCheckBox(this);
+    m_highlightOnClick->setChecked(config->highlightOnClick());
+    m_animateThumbnails = new QCheckBox(this);
+    m_animateThumbnails->setChecked(config->animateThumbnails());
+    m_animatePreview = new QCheckBox(this);
+    m_animatePreview->setChecked(config->animatePreview());
+    m_showFileTypeTag = new QCheckBox(this);
+    m_showFileTypeTag->setChecked(config->showFileTypeTag());
+    bhvForm->addRow("Copy on Double-Click:", m_copyOnDblClick);
+    bhvForm->addRow("Highlight on Click:", m_highlightOnClick);
+    bhvForm->addRow("Animate Thumbnails:", m_animateThumbnails);
+    bhvForm->addRow("Animate Preview:", m_animatePreview);
+    bhvForm->addRow("Show File Type Tag:", m_showFileTypeTag);
+    contentLayout->addWidget(bhvGroup);
+
+    // --- Window ---
+    auto *winGroup = new QGroupBox("Window");
+    auto *winForm = new QFormLayout(winGroup);
+    QSize winSize = config->getWindowSize();
+    QPoint winPos = config->getWindowPosition();
+    m_winPosX = makeSpinBox(-9999, 9999, winPos.x(), this);
+    m_winPosY = makeSpinBox(-9999, 9999, winPos.y(), this);
+    m_winW = makeSpinBox(200, 9999, winSize.width(), this);
+    m_winH = makeSpinBox(200, 9999, winSize.height(), this);
+    m_alwaysOnTop = new QCheckBox(this);
+    m_alwaysOnTop->setChecked(config->getDefaultAlwaysOnTop());
+    winForm->addRow("Position X:", m_winPosX);
+    winForm->addRow("Position Y:", m_winPosY);
+    winForm->addRow("Width:", m_winW);
+    winForm->addRow("Height:", m_winH);
+    winForm->addRow("Always on Top:", m_alwaysOnTop);
+    contentLayout->addWidget(winGroup);
+
+    // --- Reset ---
+    auto *resetBtn = new QPushButton("Reset to Defaults");
+    connect(resetBtn, &QPushButton::clicked, this, &GeneralSettingsPage::resetToDefaults);
+    contentLayout->addWidget(resetBtn);
+
+    contentLayout->addStretch();
+
+    scrollArea->setWidget(content);
+    root->addWidget(scrollArea);
+}
+
+void GeneralSettingsPage::applyToConfig() {
+    QJsonObject cfg = m_config->config();
+    QJsonObject def = cfg["default"].toObject();
+
+    QJsonObject ui = def["ui"].toObject();
+    ui["categoryButtonSize"] = m_categoryButtonSize->value();
+    ui["gridCellSize"] = m_gridCellSize->value();
+    def["ui"] = ui;
+
+    QJsonObject bhv = def["behavior"].toObject();
+    bhv["copyOnDoubleClick"] = m_copyOnDblClick->isChecked();
+    bhv["highlightOnClick"] = m_highlightOnClick->isChecked();
+    bhv["animateThumbnails"] = m_animateThumbnails->isChecked();
+    bhv["animatePreview"] = m_animatePreview->isChecked();
+    bhv["showFileTypeTag"] = m_showFileTypeTag->isChecked();
+    def["behavior"] = bhv;
+
+    QJsonObject win = def["window"].toObject();
+    QJsonArray pos = {m_winPosX->value(), m_winPosY->value()};
+    QJsonArray size = {m_winW->value(), m_winH->value()};
+    win["position"] = pos;
+    win["size"] = size;
+    win["alwaysOnTop"] = m_alwaysOnTop->isChecked();
+    def["window"] = win;
+
+    cfg["default"] = def;
+    m_config->setConfig(cfg);
+}
+
+void GeneralSettingsPage::resetToDefaults() {
+    QJsonObject def = m_config->getDefaultConfig()["default"].toObject();
+
+    QJsonObject ui = def["ui"].toObject();
+    m_categoryButtonSize->setValue(ui["categoryButtonSize"].toInt(90));
+    m_gridCellSize->setValue(ui["gridCellSize"].toInt(120));
+
+    QJsonObject bhv = def["behavior"].toObject();
+    m_copyOnDblClick->setChecked(bhv["copyOnDoubleClick"].toBool(true));
+    m_highlightOnClick->setChecked(bhv["highlightOnClick"].toBool(true));
+    m_animateThumbnails->setChecked(bhv["animateThumbnails"].toBool(false));
+    m_animatePreview->setChecked(bhv["animatePreview"].toBool(true));
+    m_showFileTypeTag->setChecked(bhv["showFileTypeTag"].toBool(true));
+
+    QJsonObject win = def["window"].toObject();
+    QJsonArray pos = win["position"].toArray();
+    QJsonArray size = win["size"].toArray();
+    m_winPosX->setValue(pos.size() == 2 ? pos[0].toInt() : 900);
+    m_winPosY->setValue(pos.size() == 2 ? pos[1].toInt() : 50);
+    m_winW->setValue(size.size() == 2 ? size[0].toInt() : 540);
+    m_winH->setValue(size.size() == 2 ? size[1].toInt() : 430);
+    m_alwaysOnTop->setChecked(win["alwaysOnTop"].toBool(true));
+}

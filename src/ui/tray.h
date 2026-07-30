@@ -10,7 +10,6 @@ class TrayIcon : public QSystemTrayIcon {
     Q_OBJECT
 
 public:
-    QString Version = "1.8.0";
 
     TrayIcon(const TrayIcon &) = delete;
     TrayIcon &operator=(const TrayIcon &) = delete;
@@ -22,7 +21,6 @@ public:
                             int timeout = 10000);
 
     QAction *action_settings;
-    QAction *action_openRepo;
     QAction *action_rescan;
 
     QMenu *showSubMenu;

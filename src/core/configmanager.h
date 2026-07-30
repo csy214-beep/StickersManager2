@@ -18,10 +18,13 @@ struct LibraryConfig
     QString path;
     QString hotkey;
     bool enabled;
+    QJsonObject settings;
 
     LibraryConfig() : enabled(true) {}
     LibraryConfig(const QString &p, const QString &h, bool e = true)
         : path(p), hotkey(h), enabled(e) {}
+    LibraryConfig(const QString &p, const QString &h, const QJsonObject &s, bool e = true)
+        : path(p), hotkey(h), enabled(e), settings(s) {}
 };
 
 class ConfigManager : public QObject {
@@ -39,25 +42,61 @@ public:
     void setLibraries(const QVector<LibraryConfig> &libs);
     void addLibrary(const LibraryConfig &lib);
 
+    void setConfig(const QJsonObject &cfg);
+    QJsonObject config() const;
+
+    // settings.json
+    bool loadSettings();
+    bool saveSettings();
+    QString getDoubleClickTarget() const;
+    void setDoubleClickTarget(const QString &v);
+
+    // General defaults
     QSize getWindowSize() const;
     QPoint getWindowPosition() const;
-
     int getCategoryButtonSize() const;
     int getGridCellSize() const;
     int getGridColumns() const;
-    int getThumbnailCacheSize() const;
-
     bool animateThumbnails() const;
     bool animatePreview() const;
     bool showFileTypeTag() const;
+    bool copyOnDoubleClick() const;
+    bool highlightOnClick() const;
+    bool getDefaultAlwaysOnTop() const;
+
+    // settings.json fields
+    int getSearchDelayMs() const;
+    void setSearchDelayMs(int v);
+    int getThumbnailCacheSize() const;
+    void setThumbnailCacheSize(int v);
+
+    // Effective per-library
+    QSize getEffectiveWindowSize(const LibraryConfig &lib) const;
+    QPoint getEffectiveWindowPosition(const LibraryConfig &lib) const;
+    int getEffectiveCategoryButtonSize(const LibraryConfig &lib) const;
+    int getEffectiveGridCellSize(const LibraryConfig &lib) const;
+    int getEffectiveGridColumns(const LibraryConfig &lib) const;
+    int getEffectiveThumbnailCacheSize(const LibraryConfig &lib) const;
+    bool getEffectiveAnimateThumbnails(const LibraryConfig &lib) const;
+    bool getEffectiveAnimatePreview(const LibraryConfig &lib) const;
+    bool getEffectiveShowFileTypeTag(const LibraryConfig &lib) const;
+    bool getEffectiveHighlightOnClick(const LibraryConfig &lib) const;
+    bool getEffectiveCopyOnDoubleClick(const LibraryConfig &lib) const;
+    bool getEffectiveAlwaysOnTop(const LibraryConfig &lib) const;
 
     QString getConfigPath() const;
 
+    QJsonObject getDefaultConfig();
+
 private:
+    QJsonObject defaultBlock() const { return m_config["default"].toObject(); }
+    static QJsonObject libCatSettings(const LibraryConfig &lib, const QString &category);
+
     QJsonObject m_config;
     QString m_configPath;
 
-    QJsonObject getDefaultConfig();
+    QJsonObject m_settings;
+    QString m_settingsPath;
 };
 
 #endif // CONFIGMANAGER_H

@@ -24,8 +24,8 @@ StickerCell::StickerCell(const QString &filePath, int cellSize, QWidget *parent)
       , m_isHighlighted(false)
       , m_hasRealThumbnail(false) {
     setFixedSize(cellSize, cellSize);
-    setFrameShape(QFrame::Box);
-    setStyleSheet("QFrame { background-color: #f5f5f5; border: 2px solid #e0e0e0; }");
+    setAutoFillBackground(true);
+    setBackgroundRole(QPalette::Base);
 
     // 图片标签
     m_imageLabel = new QLabel(this);
@@ -189,13 +189,17 @@ void StickerCell::setShowTag(bool show) {
 
 void StickerCell::clearHighlight() {
     m_isHighlighted = false;
-    setStyleSheet("QFrame { background-color: #f5f5f5; border: 2px solid #e0e0e0; }");
+    setStyleSheet(QString());
 }
 
 void StickerCell::mousePressEvent(QMouseEvent *event) {
-    // 无论是左键还是右键，都先设置高亮
-    m_isHighlighted = true;
-    setStyleSheet("QFrame { background-color: #e3f2fd; border: 2px solid #2196f3; }");
+    if (m_highlightEnabled) {
+        m_isHighlighted = true;
+        QColor hl = palette().color(QPalette::Highlight);
+        setStyleSheet(QString("QFrame { background-color: %1; border: 2px solid %2; }")
+                          .arg(hl.lighter(180).name())
+                          .arg(hl.name()));
+    }
 
     if (event->button() == Qt::RightButton)
     {
@@ -208,13 +212,13 @@ void StickerCell::mousePressEvent(QMouseEvent *event) {
 }
 
 void StickerCell::mouseDoubleClickEvent(QMouseEvent *event) {
-    // 右键双击不算双击，不执行复制和关闭窗口
+    if (!m_copyOnDblClick) return;
+
     if (event->button() == Qt::RightButton)
     {
         return;
     }
 
-    // 1. 验证文件存在
     if (!QFile::exists(m_filePath)) {
         qWarning() << "File does not exist:" << m_filePath;
         TrayIcon::showMessage("Warning", "File not found: " + m_filePath);

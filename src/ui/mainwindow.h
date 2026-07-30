@@ -63,6 +63,7 @@ private:
     ThumbnailCache *m_thumbnailCache;
     LibraryConfig m_libConfig;
 
+    QWidget *m_categoryPanel = nullptr;
     QScrollArea *m_categoryScroll;
     QWidget *m_categoryContainer;
     QVBoxLayout *m_categoryLayout;

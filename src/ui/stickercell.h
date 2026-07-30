@@ -29,6 +29,8 @@ public:
     void setAnimateEnabled(bool enabled);
     void setInViewport(bool visible);
     void setShowTag(bool show);
+    void setHighlightEnabled(bool enabled) { m_highlightEnabled = enabled; }
+    void setCopyOnDoubleClick(bool enabled) { m_copyOnDblClick = enabled; }
 
 signals:
     void clicked(const QString &filePath);
@@ -58,6 +60,8 @@ private:
     bool m_animateEnabled = false;
     bool m_inViewport = true;
     bool m_showTag = true;
+    bool m_highlightEnabled = true;
+    bool m_copyOnDblClick = true;
     QMovie *m_movie = nullptr;
     QFutureWatcher<QByteArray> *m_animWatcher = nullptr;
 };

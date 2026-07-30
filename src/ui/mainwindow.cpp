@@ -7,12 +7,13 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QScrollBar>
+#include "appinfo.h"
 #include "tray.h"
 
 MainWindow::MainWindow(ConfigManager *config, const LibraryConfig &libConfig, QWidget *parent)
     : QMainWindow(parent), m_config(config), m_library(nullptr), m_thumbnailCache(nullptr),
       m_searchTimer(new QTimer(this)), m_libConfig(libConfig) {
-    m_thumbnailCache = new ThumbnailCache(m_config->getThumbnailCacheSize(), this);
+    m_thumbnailCache = new ThumbnailCache(m_config->getEffectiveThumbnailCacheSize(m_libConfig), this);
     m_library = new StickerLibrary(this);
 
     connect(m_thumbnailCache, &ThumbnailCache::thumbnailReady,
@@ -34,11 +35,14 @@ LibraryConfig MainWindow::getLibraryConfig() const {
 }
 
 void MainWindow::initUI() {
-    setWindowTitle("Stickers Manager " + TrayIcon::instance()->Version);
-    QSize windowSize = m_config->getWindowSize();
-    QPoint windowPos = m_config->getWindowPosition();
+    setWindowTitle(AppInfo::name() + " " + AppInfo::version());
+    QSize windowSize = m_config->getEffectiveWindowSize(m_libConfig);
+    QPoint windowPos = m_config->getEffectiveWindowPosition(m_libConfig);
     setGeometry(windowPos.x(), windowPos.y(), windowSize.width(), windowSize.height());
-    setWindowFlags(Qt::Window | Qt::WindowStaysOnTopHint);
+    Qt::WindowFlags flags = Qt::Window;
+    if (m_config->getEffectiveAlwaysOnTop(m_libConfig))
+        flags |= Qt::WindowStaysOnTopHint;
+    setWindowFlags(flags);
 
     QWidget *centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
@@ -59,7 +63,8 @@ QWidget *MainWindow::createCategoryPanel() {
     QWidget *panel = new QWidget();
     QVBoxLayout *layout = new QVBoxLayout(panel);
     layout->setContentsMargins(0, 0, 0, 0);
-    int buttonSize = m_config->getCategoryButtonSize();
+    int buttonSize = m_config->getEffectiveCategoryButtonSize(m_libConfig);
+    m_categoryPanel = panel;
     panel->setMaximumWidth(buttonSize + 20);
     panel->setMinimumWidth(buttonSize + 20);
 
@@ -114,7 +119,8 @@ QWidget *MainWindow::createStickerPanel() {
 void MainWindow::loadLibrary() {
     QString libraryPath = m_libConfig.path;
     if (libraryPath.isEmpty() || !QDir(libraryPath).exists()) {
-        libraryPath = QFileDialog::getExistingDirectory(this, "Select Stickers Library", QDir::homePath());
+        libraryPath = QFileDialog::getExistingDirectory(this, "Select Stickers Library", QDir::homePath(),
+            QFileDialog::ShowDirsOnly | QFileDialog::DontUseNativeDialog);
         if (libraryPath.isEmpty()) return;
         m_libConfig.path = libraryPath;
         m_config->addLibrary(m_libConfig);
@@ -136,7 +142,11 @@ void MainWindow::populateCategories()
     m_pendingCategoryButtons.clear();
 
     QMap<QString, QVector<QString> > categories = m_library->getCategories();
-    int buttonSize = m_config->getCategoryButtonSize();
+    int buttonSize = m_config->getEffectiveCategoryButtonSize(m_libConfig);
+    if (m_categoryPanel) {
+        m_categoryPanel->setMaximumWidth(buttonSize + 20);
+        m_categoryPanel->setMinimumWidth(buttonSize + 20);
+    }
 
     for (const QString &categoryName: categories.keys()) {
         QVector<QString> stickers = categories[categoryName];
@@ -186,8 +196,8 @@ void MainWindow::displayStickers(const QVector<QString> &stickers)
     }
     m_currentCells.clear();
 
-    int cellSize = m_config->getGridCellSize();
-    int minColumns = m_config->getGridColumns();
+    int cellSize = m_config->getEffectiveGridCellSize(m_libConfig);
+    int minColumns = m_config->getEffectiveGridColumns(m_libConfig);
     int spacing = m_gridLayout->spacing();
     int scrollWidth = m_stickerScroll->viewport()->width();
 
@@ -205,8 +215,10 @@ void MainWindow::displayStickers(const QVector<QString> &stickers)
         int col = i % columns;
 
         StickerCell *cell = new StickerCell(stickerPath, cellSize);
-        cell->setAnimateEnabled(m_config->animateThumbnails());
-        cell->setShowTag(m_config->showFileTypeTag());
+        cell->setAnimateEnabled(m_config->getEffectiveAnimateThumbnails(m_libConfig));
+        cell->setShowTag(m_config->getEffectiveShowFileTypeTag(m_libConfig));
+        cell->setHighlightEnabled(m_config->getEffectiveHighlightOnClick(m_libConfig));
+        cell->setCopyOnDoubleClick(m_config->getEffectiveCopyOnDoubleClick(m_libConfig));
         connect(cell, &StickerCell::clicked, this, &MainWindow::onStickerClicked);
         connect(cell, &StickerCell::doubleClicked, this, &MainWindow::onStickerDoubleClicked);
         connect(cell, &StickerCell::rightClicked, this, &MainWindow::onStickerRightClicked);
@@ -264,6 +276,14 @@ void MainWindow::handleThumbnailLoaded(const QString &filePath, const QPixmap &p
 
 void MainWindow::showWindow() {
     if (isHidden()) {
+        setWindowFlag(Qt::WindowStaysOnTopHint,
+                      m_config->getEffectiveAlwaysOnTop(m_libConfig));
+        setGeometry(
+            m_config->getEffectiveWindowPosition(m_libConfig).x(),
+            m_config->getEffectiveWindowPosition(m_libConfig).y(),
+            m_config->getEffectiveWindowSize(m_libConfig).width(),
+            m_config->getEffectiveWindowSize(m_libConfig).height()
+        );
         update();
         show();
         recalculateGridColumns();
@@ -282,6 +302,7 @@ void MainWindow::reloadLibrary() {
     if (m_library) {
         if (m_library->scanLibrary()) {
             populateCategories();
+            recalculateGridColumns();
         }
     }
 }
@@ -301,7 +322,7 @@ void MainWindow::onSearchTextChanged(const QString &text) {
         if (!m_currentCategory.isEmpty()) showCategory(m_currentCategory);
     } else {
         m_searchTimer->stop();
-        m_searchTimer->start(300);
+        m_searchTimer->start(m_config->getSearchDelayMs());
     }
 }
 
@@ -345,7 +366,7 @@ void MainWindow::onStickerRightClicked(const QString &filePath)
         currentPreview->accept();
         currentPreview = nullptr;
     } else {
-        currentPreview = new ImagePreviewDialog(filePath, m_config->animatePreview(), this);
+        currentPreview = new ImagePreviewDialog(filePath, m_config->getEffectiveAnimatePreview(m_libConfig), this);
         connect(currentPreview, &ImagePreviewDialog::finished, [&]() { currentPreview = nullptr; });
         currentPreview->show();
     }
@@ -378,8 +399,8 @@ void MainWindow::recalculateGridColumns() {
     if (!m_stickerScroll || !m_gridLayout)
         return;
 
-    int cellSize = m_config->getGridCellSize();
-    int minColumns = m_config->getGridColumns();
+    int cellSize = m_config->getEffectiveGridCellSize(m_libConfig);
+    int minColumns = m_config->getEffectiveGridColumns(m_libConfig);
     int spacing = m_gridLayout->spacing();
     int scrollWidth = m_stickerScroll->viewport()->width();
 

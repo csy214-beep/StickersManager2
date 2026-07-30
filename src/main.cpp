@@ -2,10 +2,14 @@
 #include <QMap>
 #include <QFileInfo>
 #include <QObject>
-#include <QMessageBox>
-#include <QFileDialog>
 #include <QDir>
 #include <QStyleFactory>
+#include <QPointer>
+#include <QMenu>
+#include <QIcon>
+#include <QLockFile>
+#include <QMessageBox>
+#include <QStandardPaths>
 #include "log.hpp"
 #include "tray.h"
 #include "mainwindow.h"
@@ -13,6 +17,7 @@
 #include "globalinputlistener.h"
 #include "convertcodetostring.hpp"
 #include "launcher.hpp"
+#include "settingsdialog.h"
 
 #define DEBUG_MODE false
 
@@ -48,88 +53,137 @@ int main(int argc, char *argv[]) {
         app.setStyle("Fusion");
 
     ConfigManager config;
-
-    auto libraries = config.getLibraries();
-    bool hasValidLibrary = false;
-    for (const auto &lib: libraries) {
-        if (lib.enabled && !lib.path.isEmpty() && QDir(lib.path).exists()) {
-            hasValidLibrary = true;
-            break;
-        }
-    }
-
-    if (!hasValidLibrary) {
-        QMessageBox::information(nullptr, "Welcome to Stickers Manager",
-                                 "Welcome to Stickers Manager!\n\n"
-                                 "Please select your sticker library folder.\n"
-                                 "The library should contain multiple subfolders, each representing a category.");
-
-        QString libraryPath = QFileDialog::getExistingDirectory(nullptr,
-                                                                "Select Sticker Library Folder", QDir::homePath());
-
-        if (!libraryPath.isEmpty()) {
-            LibraryConfig newLib(libraryPath, "Ctrl+Shift+E", true);
-            config.addLibrary(newLib);
-            config.saveConfig();
-            qDebug() << "First launch, added sticker library:" << libraryPath;
-        } else {
-            QMessageBox::warning(nullptr, "Warning",
-                                 "No sticker library folder selected, program will exit.");
-            exit(0);
-        }
-    }
-
-    libraries = config.getLibraries();
+    QPointer<SettingsDialog> settingsDlg;
 
     QMap<QString, MainWindow *> windows;
+    QMap<QString, MainWindow *> hotkeyToWindow;
+    QPointer<MainWindow> firstWindow;
 
-    for (const auto &lib: libraries) {
-        if (!lib.enabled || lib.path.isEmpty())
-            continue;
+    auto createWindows = [&](const QVector<LibraryConfig> &libs) {
+        for (const auto &lib : libs) {
+            if (!lib.enabled || lib.path.isEmpty())
+                continue;
+            if (!windows.contains(lib.path)) {
+                auto *window = new MainWindow(&config, lib);
+                windows[lib.path] = window;
+                QFileInfo dirInfo(lib.path);
+                window->setWindowTitle("Stickers Manager - " + dirInfo.fileName());
+                window->hide();
+            }
+        }
+        rebuildHotkeyMapping(windows, hotkeyToWindow);
+        TrayIcon::instance()->updateShowMenu(libs);
+        if (firstWindow.isNull() && !windows.isEmpty())
+            firstWindow = windows.first();
+    };
 
-        MainWindow *window = new MainWindow(&config, lib);
-        windows[lib.path] = window;
+    auto removeStaleWindows = [&](const QVector<LibraryConfig> &libs) {
+        QStringList active;
+        for (const auto &lib : libs)
+            if (lib.enabled && !lib.path.isEmpty())
+                active.append(lib.path);
+        QStringList toRemove;
+        for (auto it = windows.begin(); it != windows.end(); ++it)
+            if (!active.contains(it.key()))
+                toRemove.append(it.key());
+        for (const auto &path : toRemove) {
+            delete windows[path];
+            windows.remove(path);
+        }
+    };
 
-        QFileInfo dirInfo(lib.path);
-        QString title = "Stickers Manager - " + dirInfo.fileName();
-        window->setWindowTitle(title);
+    auto fullReload = [&]() {
+        config.loadSettings();
+        auto libs = config.getLibraries();
+        removeStaleWindows(libs);
+        createWindows(libs);
 
-        window->hide();
+        // rescan all existing windows
+        for (auto window : windows)
+            window->reloadLibrary();
+    };
+
+    auto showSettings = [&](bool toggle = false) {
+        if (toggle && settingsDlg && settingsDlg->isVisible()) {
+            settingsDlg->close();
+            return;
+        }
+        if (!settingsDlg) {
+            auto *dlg = new SettingsDialog(&config);
+            dlg->setAttribute(Qt::WA_DeleteOnClose);
+            QObject::connect(dlg, &QDialog::accepted, fullReload);
+            QObject::connect(dlg, &QDialog::finished, [&]() { settingsDlg = nullptr; });
+            settingsDlg = dlg;
+        }
+        settingsDlg->show();
+        settingsDlg->raise();
+        settingsDlg->activateWindow();
+    };
+
+    // Show settings dialog on first launch if no libraries configured
+    auto libs = config.getLibraries();
+    bool hasLib = false;
+    for (const auto &lib : libs)
+        if (lib.enabled && !lib.path.isEmpty() && QDir(lib.path).exists()) {
+            hasLib = true;
+            break;
+        }
+
+    if (!hasLib) {
+        SettingsDialog tmpDlg(&config, nullptr);
+        if (tmpDlg.exec() == QDialog::Accepted) {
+            config.loadSettings();
+            libs = config.getLibraries();
+        }
     }
 
-    TrayIcon::instance()->updateShowMenu(libraries);
+    createWindows(libs);
+
+    TrayIcon::instance()->updateShowMenu(libs);
 
     QObject::connect(TrayIcon::instance()->showSubMenu, &QMenu::triggered, [&](QAction *action) {
         QString libraryPath = action->data().toString();
         if (windows.contains(libraryPath)) {
             MainWindow *window = windows[libraryPath];
-            if (window->isHidden()) {
+            if (window->isHidden())
                 window->showWindow();
-            } else {
+            else
                 window->hide();
-            }
         }
     });
-
-    QPointer<MainWindow> firstWindow = windows.isEmpty() ? nullptr : windows.first();
 
     QObject::connect(
         TrayIcon::instance(), &TrayIcon::activated,
         [&](QSystemTrayIcon::ActivationReason reason) {
-            if (reason == QSystemTrayIcon::DoubleClick) {
-                if (firstWindow.isNull())
-                    return;
-                if (firstWindow->isHidden())
-                    firstWindow->showWindow();
+            if (reason != QSystemTrayIcon::DoubleClick) return;
+
+            QString target = config.getDoubleClickTarget();
+            if (target == "settings") {
+                showSettings(true);
+                return;
+            }
+
+            MainWindow *win = nullptr;
+            if (target == "first-library" || target.isEmpty()) {
+                win = windows.isEmpty() ? nullptr : windows.first();
+            } else {
+                for (auto it = windows.begin(); it != windows.end(); ++it) {
+                    if (QFileInfo(it.key()).fileName() == target) {
+                        win = it.value();
+                        break;
+                    }
+                }
+            }
+
+            if (win) {
+                if (win->isHidden())
+                    win->showWindow();
                 else
-                    firstWindow->hide();
+                    win->hide();
             }
         });
 
     GlobalInputListener *listener = new GlobalInputListener();
-
-    QMap<QString, MainWindow *> hotkeyToWindow;
-    rebuildHotkeyMapping(windows, hotkeyToWindow);
 
     if (!hotkeyToWindow.isEmpty()) {
         QObject::connect(listener, &GlobalInputListener::keyReleased, [&](int keyCode, ModifierKeys modifiers) {
@@ -141,11 +195,10 @@ int main(int argc, char *argv[]) {
             for (auto it = hotkeyToWindow.begin(); it != hotkeyToWindow.end(); ++it) {
                 if (ShortcutCompare::compareShortcutKeys(hotkey, it.key())) {
                     MainWindow *window = it.value();
-                    if (window->isHidden()) {
+                    if (window->isHidden())
                         window->showWindow();
-                    } else {
+                    else
                         window->hide();
-                    }
                     break;
                 }
             }
@@ -158,42 +211,10 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    QObject::connect(TrayIcon::instance()->action_rescan, &QAction::triggered, [&]() {
-        config.reloadFromDisk();
-        auto newLibs = config.getLibraries();
+    QObject::connect(TrayIcon::instance()->action_rescan, &QAction::triggered, fullReload);
 
-        // create windows for new libraries
-        for (const auto &lib : newLibs) {
-            if (!lib.enabled || lib.path.isEmpty())
-                continue;
-            if (!windows.contains(lib.path)) {
-                MainWindow *window = new MainWindow(&config, lib);
-                windows[lib.path] = window;
-                QFileInfo dirInfo(lib.path);
-                window->setWindowTitle("Stickers Manager - " + dirInfo.fileName());
-                window->hide();
-            }
-        }
-
-        rebuildHotkeyMapping(windows, hotkeyToWindow);
-        TrayIcon::instance()->updateShowMenu(newLibs);
-
-        if (firstWindow.isNull() && !windows.isEmpty())
-            firstWindow = windows.first();
-
-        // rescan all existing windows
-        for (auto window : windows) {
-            window->reloadLibrary();
-        }
-    });
-
-    QObject::connect(TrayIcon::instance()->action_settings, &QAction::triggered,
-                     [&]() { launch(config.getConfigPath()); });
-    QObject::connect(TrayIcon::instance()->action_openRepo, &QAction::triggered, [&]() {
-        auto libs = config.getLibraries();
-        if (!libs.isEmpty()) {
-            launch(libs.first().path);
-        }
+    QObject::connect(TrayIcon::instance()->action_settings, &QAction::triggered, [&]() {
+        showSettings(false);
     });
 
     TrayIcon::instance()->show();

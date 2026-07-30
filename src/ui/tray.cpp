@@ -1,4 +1,5 @@
 #include "tray.h"
+#include "appinfo.h"
 #include <QApplication>
 #include <QCoreApplication>
 #include <QStyle>
@@ -41,16 +42,14 @@ TrayIcon::TrayIcon(QObject *parent)
         setIcon(icon);
     }
 
-    setToolTip("Stickers Manager " + Version);
+    setToolTip(AppInfo::name() + " " + AppInfo::version());
 
     menu = new CustomMenu();
 
     showSubMenu = new CustomMenu("Show");
     action_settings = new QAction("Settings", this);
-    action_openRepo = new QAction("Pictures", this);
     action_rescan = new QAction("Rescan", this);
     QAction *action_openPath = new QAction("Open App Dir", this);
-    QAction *openGithubAction = new QAction("GitHub", this);
     QAction *exitAction = new QAction("Exit", this);
 
     connect(exitAction, &QAction::triggered, []()
@@ -60,15 +59,9 @@ TrayIcon::TrayIcon(QObject *parent)
             {
         QString appDir = QCoreApplication::applicationDirPath();
         launch(appDir); });
-    connect(openGithubAction, &QAction::triggered, []()
-            {
-        QString githubUrl = "https://github.com/igugyj/StickersManager2";
-        launch(githubUrl); });
 
     menu->addMenu(showSubMenu);
-    menu->addActions({action_rescan, action_settings, action_openPath, action_openRepo});
-    menu->addSeparator();
-    menu->addAction(openGithubAction);
+    menu->addActions({action_rescan, action_settings, action_openPath});
     menu->addSeparator();
     menu->addAction(exitAction);
 
