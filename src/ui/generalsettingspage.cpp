@@ -9,6 +9,11 @@
 #include <QPushButton>
 #include <QScrollArea>
 #include <QJsonObject>
+#include <QHBoxLayout>
+#include <QLabel>
+#include <QStyle>
+#include <QMessageBox>
+#include <QSize>
 
 static QSpinBox *makeSpinBox(int min, int max, int val, QWidget *parent) {
     auto *sb = new QSpinBox(parent);
@@ -46,13 +51,31 @@ GeneralSettingsPage::GeneralSettingsPage(ConfigManager *config, QWidget *parent)
     m_highlightOnClick->setChecked(config->highlightOnClick());
     m_animateThumbnails = new QCheckBox(this);
     m_animateThumbnails->setChecked(config->animateThumbnails());
+    auto *animThumbRow = new QWidget(this);
+    auto *animThumbLayout = new QHBoxLayout(animThumbRow);
+    animThumbLayout->setContentsMargins(0, 0, 0, 0);
+    auto *animThumbInfoBtn = new QPushButton(animThumbRow);
+    animThumbInfoBtn->setIcon(style()->standardIcon(QStyle::SP_MessageBoxWarning));
+    animThumbInfoBtn->setIconSize(QSize(16, 16));
+    animThumbInfoBtn->setFixedSize(20, 20);
+    animThumbInfoBtn->setFlat(true);
+    animThumbInfoBtn->setCursor(Qt::PointingHandCursor);
+    connect(animThumbInfoBtn, &QPushButton::clicked, this, []() {
+        QMessageBox::information(nullptr, "Animate Thumbnails",
+            "Enabling this may cause lag or stutter when the library contains "
+            "many animated files. It is not recommended to enable it when there "
+            "are too many animated files.");
+    });
+    animThumbLayout->addWidget(m_animateThumbnails);
+    animThumbLayout->addWidget(animThumbInfoBtn, 0, Qt::AlignLeft);
+    animThumbLayout->addStretch();
     m_animatePreview = new QCheckBox(this);
     m_animatePreview->setChecked(config->animatePreview());
     m_showFileTypeTag = new QCheckBox(this);
     m_showFileTypeTag->setChecked(config->showFileTypeTag());
     bhvForm->addRow("Copy on Double-Click:", m_copyOnDblClick);
     bhvForm->addRow("Highlight on Click:", m_highlightOnClick);
-    bhvForm->addRow("Animate Thumbnails:", m_animateThumbnails);
+    bhvForm->addRow("Animate Thumbnails:", animThumbRow);
     bhvForm->addRow("Animate Preview:", m_animatePreview);
     bhvForm->addRow("Show File Type Tag:", m_showFileTypeTag);
     contentLayout->addWidget(bhvGroup);

@@ -17,6 +17,9 @@
 #include <QFileInfo>
 #include <QLabel>
 #include <QScrollArea>
+#include <QStyle>
+#include <QMessageBox>
+#include <QSize>
 
 static const QStringList BOOL_ITEMS = {"General", "On", "Off"};
 static const QStringList BOOL_KEYS = {"copyOnDoubleClick", "highlightOnClick",
@@ -194,6 +197,23 @@ void LibrarySettingsPage::rebuildList() {
             libCfg.settings["behavior"].toObject().contains("animateThumbnails")
                 ? boolToCombo(libCfg.settings["behavior"].toObject()["animateThumbnails"].toBool())
                 : "General", this);
+        auto *animThumbRow = new QWidget(this);
+        auto *animThumbLayout = new QHBoxLayout(animThumbRow);
+        animThumbLayout->setContentsMargins(0, 0, 0, 0);
+        auto *animThumbInfoBtn = new QPushButton(animThumbRow);
+        animThumbInfoBtn->setIcon(style()->standardIcon(QStyle::SP_MessageBoxWarning));
+        animThumbInfoBtn->setIconSize(QSize(16, 16));
+        animThumbInfoBtn->setFixedSize(20, 20);
+        animThumbInfoBtn->setFlat(true);
+        animThumbInfoBtn->setCursor(Qt::PointingHandCursor);
+        connect(animThumbInfoBtn, &QPushButton::clicked, this, []() {
+            QMessageBox::information(nullptr, "Animate Thumbnails",
+                "Enabling this may cause lag or stutter when the library contains "
+                "many animated files. It is not recommended to enable it when there "
+                "are too many animated files.");
+        });
+        animThumbLayout->addWidget(ovAnimThumb, 1);
+        animThumbLayout->addWidget(animThumbInfoBtn, 0, Qt::AlignLeft);
         auto *ovAnimPrev = makeBoolCombo(
             libCfg.settings["behavior"].toObject().contains("animatePreview")
                 ? boolToCombo(libCfg.settings["behavior"].toObject()["animatePreview"].toBool())
@@ -204,7 +224,7 @@ void LibrarySettingsPage::rebuildList() {
                 : "General", this);
         bhvOvForm->addRow("Copy on Double-Click:", ovCopyDbl);
         bhvOvForm->addRow("Highlight on Click:", ovHighlight);
-        bhvOvForm->addRow("Animate Thumbnails:", ovAnimThumb);
+        bhvOvForm->addRow("Animate Thumbnails:", animThumbRow);
         bhvOvForm->addRow("Animate Preview:", ovAnimPrev);
         bhvOvForm->addRow("Show File Type Tag:", ovTag);
         ovLayout->addWidget(bhvOv);
