@@ -27,6 +27,9 @@
 #pragma warning(pop)
 #endif
 
+QSet<QString> ImageLoader::s_animatedCache;
+QSet<QString> ImageLoader::s_staticCache;
+
 QImage ImageLoader::loadImage(const QString &filePath) {
     QFileInfo fileInfo(filePath);
     if (!fileInfo.exists()) {
@@ -46,6 +49,37 @@ QImage ImageLoader::loadImage(const QString &filePath) {
             }
             return loadWithQt(filePath);
     }
+}
+
+QImage ImageLoader::loadImageScaled(const QString &filePath, const QSize &targetSize) {
+    if (targetSize.isEmpty()) {
+        return loadImage(filePath);
+    }
+
+    QImageReader reader(filePath);
+    reader.setAutoTransform(true);
+    QSize fullSize = reader.size();
+    if (fullSize.isValid()) {
+        QSize scaledSize = fullSize.scaled(targetSize, Qt::KeepAspectRatio);
+        if (scaledSize.width() < fullSize.width() || scaledSize.height() < fullSize.height()) {
+            reader.setScaledSize(scaledSize);
+            QImage image = reader.read();
+            if (!image.isNull()) {
+                if (image.format() != QImage::Format_ARGB32 &&
+                    image.format() != QImage::Format_RGB32) {
+                    image = image.convertToFormat(QImage::Format_ARGB32);
+                }
+                return image;
+            }
+        }
+    }
+
+    // fallback: full decode + scale
+    QImage image = loadImage(filePath);
+    if (image.isNull()) {
+        return QImage();
+    }
+    return image.scaled(targetSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
 }
 
 ImageLoader::Format ImageLoader::detectFormat(const QString &filePath) {
@@ -77,11 +111,19 @@ bool ImageLoader::isFormatSupported(const QString &filePath) {
 }
 
 bool ImageLoader::isAnimated(const QString &filePath) {
+    if (s_animatedCache.contains(filePath)) return true;
+    if (s_staticCache.contains(filePath)) return false;
+
     Format format = detectFormat(filePath);
-    if (format == Format::GIF) return true;
+    if (format == Format::GIF) {
+        s_animatedCache.insert(filePath);
+        return true;
+    }
 
     QImageReader reader(filePath);
-    return reader.imageCount() > 1;
+    bool animated = reader.imageCount() > 1;
+    (animated ? s_animatedCache : s_staticCache).insert(filePath);
+    return animated;
 }
 
 QStringList ImageLoader::getSupportedExtensions() {

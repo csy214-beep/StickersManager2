@@ -4,7 +4,7 @@
 namespace AppInfo
 {
     inline QString name() { return "Stickers Manager"; }
-    inline QString version() { return "2.1.1"; }
+    inline QString version() { return "2.1.2"; }
     inline QString author() { return "SY Cheng"; }
     inline QString license() { return "MIT"; }
     inline QString repoUrl() { return "https://github.com/igugyj/StickersManager2"; }

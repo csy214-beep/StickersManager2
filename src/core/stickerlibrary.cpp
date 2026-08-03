@@ -24,6 +24,7 @@ bool StickerLibrary::scanLibrary() {
 
     m_categories.clear();
     m_allStickers.clear();
+    m_searchIndex.clear();
 
     QDir libraryDir(m_libraryPath);
     if (!libraryDir.exists()) {
@@ -57,6 +58,8 @@ bool StickerLibrary::scanLibrary() {
         if (!imageFiles.isEmpty()) {
             std::sort(imageFiles.begin(), imageFiles.end());
             m_categories[categoryName] = QVector<QString>::fromList(imageFiles);
+            for (const QString &path : imageFiles)
+                m_searchIndex.insert(path, QFileInfo(path).fileName().toLower());
             m_allStickers.append(imageFiles);
             totalStickers += imageFiles.size();
             qDebug() << "Category" << categoryName << "loaded" << imageFiles.size() << "stickers";
@@ -76,8 +79,7 @@ QVector<QString> StickerLibrary::searchStickers(const QString &keyword) {
     QVector<QString> results;
 
     for (const QString &stickerPath: m_allStickers) {
-        QFileInfo fileInfo(stickerPath);
-        if (fileInfo.fileName().toLower().contains(lowerKeyword)) {
+        if (m_searchIndex.value(stickerPath).contains(lowerKeyword)) {
             results.append(stickerPath);
         }
     }

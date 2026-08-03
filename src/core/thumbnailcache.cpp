@@ -70,7 +70,7 @@ void ThumbnailCache::onAsyncThumbnailLoaded(const QString &filePath, const QPixm
 
     {
         QMutexLocker locker(&m_cacheMutex);
-        m_cache.insert(filePath, new QPixmap(pixmap), pixmap.width() * pixmap.height() * 4);
+        m_cache.insert(filePath, new QPixmap(pixmap), 1);
     }
 
     emit thumbnailReady(filePath, pixmap);

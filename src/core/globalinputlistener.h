@@ -23,6 +23,7 @@ public:
 
     bool startListening();
     void stopListening();
+    bool isListening() const { return keyboardHook != nullptr; }
 
 signals:
     void keyReleased(int keyCode, ModifierKeys modifiers);

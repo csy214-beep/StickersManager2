@@ -76,15 +76,8 @@ void StickerCell::setThumbnail(const QPixmap &pixmap) {
     m_currentPixmap = pixmap;
     m_hasRealThumbnail = true;
 
-    // 缩放图像以适应标签，保持宽高比
-    QSize labelSize = m_imageLabel->size();
-    QPixmap scaledPixmap = pixmap.scaled(
-        labelSize,
-        Qt::KeepAspectRatio,
-        Qt::SmoothTransformation
-    );
-
-    m_imageLabel->setPixmap(scaledPixmap);
+    // 缩略图已在加载线程按 cell 尺寸缩放好，直接显示
+    m_imageLabel->setPixmap(pixmap);
     if (m_showTag) m_tagLabel->show();
 
     if (m_animateEnabled && ImageLoader::isAnimated(m_filePath) && m_inViewport) {
@@ -292,11 +285,5 @@ void StickerCell::resizeEvent(QResizeEvent *event) {
             m_imageLabel->setPixmap(framePix.scaled(
                 labelSize, Qt::KeepAspectRatio, Qt::SmoothTransformation));
         }
-    } else if (m_hasRealThumbnail && !m_currentPixmap.isNull()) {
-        m_imageLabel->setPixmap(m_currentPixmap.scaled(
-            labelSize,
-            Qt::KeepAspectRatio,
-            Qt::SmoothTransformation
-        ));
     }
 }

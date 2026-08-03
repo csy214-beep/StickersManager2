@@ -4,11 +4,11 @@
 #include <QMainWindow>
 #include <QCloseEvent>
 #include <QShortcut>
-#include <QGridLayout>
 #include <QScrollArea>
 #include <QLineEdit>
 #include <QTimer>
 #include <QMap>
+#include <QPointer>
 
 #include "configmanager.h"
 #include "stickerlibrary.h"
@@ -58,6 +58,9 @@ private:
     void populateCategories();
     void showCategory(const QString &categoryName);
     void displayStickers(const QVector<QString> &stickers);
+    void clearStickerCells();
+    void relayoutGrid();
+    void updateVisibleCells();
     void recalculateGridColumns();
     void updateCellVisibility();
 
@@ -72,17 +75,20 @@ private:
     QVBoxLayout *m_categoryLayout;
     QScrollArea *m_stickerScroll;
     QWidget *m_stickerContainer;
-    QGridLayout *m_gridLayout;
     QLineEdit *m_searchInput;
     QLineEdit *m_categorySearchInput;
 
     QTimer *m_searchTimer;
     QString m_currentCategory;
+    QVector<QString> m_currentStickers;
     QVector<StickerCell *> m_currentCells;
+    int m_gridColumns = 1;
+    int m_gridSpacing = 8;
 
     QMap<CategoryButton *, QString> m_categoryButtons;
     QMap<QString, CategoryButton *> m_pendingCategoryButtons;
     QMap<QString, StickerCell *> m_cellMap;
+    QPointer<ImagePreviewDialog> m_previewDlg;
 };
 
 #endif // MAINWINDOW_H

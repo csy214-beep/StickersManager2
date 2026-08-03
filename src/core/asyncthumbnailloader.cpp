@@ -83,7 +83,7 @@ QImage AsyncThumbnailLoader::loadThumbnailInternal(const QString &filePath, cons
         return QImage();
     }
 
-    QImage image = ImageLoader::loadImage(filePath);
+    QImage image = ImageLoader::loadImageScaled(filePath, targetSize);
     if (image.isNull()) {
         QImage placeholder(targetSize, QImage::Format_ARGB32);
         placeholder.fill(QColor(240, 240, 240));
@@ -94,8 +94,5 @@ QImage AsyncThumbnailLoader::loadThumbnailInternal(const QString &filePath, cons
         return placeholder;
     }
 
-    QImage thumbnail = image.scaled(targetSize,
-                                    Qt::KeepAspectRatio, Qt::SmoothTransformation);
-
-    return thumbnail;
+    return image;
 }

@@ -3,6 +3,7 @@
 #include <QCoreApplication>
 #include <QDebug>
 #include <QJsonArray>
+#include <QSaveFile>
 
 ConfigManager::ConfigManager(QObject *parent)
     : QObject(parent) {
@@ -51,35 +52,13 @@ bool ConfigManager::loadConfig() {
 }
 
 bool ConfigManager::saveConfig() {
-    QString tmpPath = m_configPath + ".tmp";
-    QFile tmpFile(tmpPath);
-    if (!tmpFile.open(QIODevice::WriteOnly))
-    {
+    QSaveFile file(m_configPath);
+    if (!file.open(QIODevice::WriteOnly)) {
         return false;
     }
 
     QJsonDocument doc(m_config);
-    qint64 bytesWritten = tmpFile.write(doc.toJson());
-    tmpFile.close();
-
-    if (bytesWritten == -1)
-    {
-        QFile::remove(tmpPath);
-        return false;
-    }
-
-    if (QFile::exists(m_configPath))
-    {
-        if (!QFile::remove(m_configPath))
-        {
-            QFile::remove(tmpPath);
-            return false;
-        }
-    }
-
-    if (!QFile::rename(tmpPath, m_configPath))
-    {
-        QFile::remove(tmpPath);
+    if (file.write(doc.toJson()) == -1 || !file.commit()) {
         return false;
     }
 
@@ -121,27 +100,13 @@ bool ConfigManager::loadSettings() {
 }
 
 bool ConfigManager::saveSettings() {
-    QString tmpPath = m_settingsPath + ".tmp";
-    QFile tmpFile(tmpPath);
-    if (!tmpFile.open(QIODevice::WriteOnly))
+    QSaveFile file(m_settingsPath);
+    if (!file.open(QIODevice::WriteOnly))
         return false;
 
     QJsonDocument doc(m_settings);
-    qint64 bytesWritten = tmpFile.write(doc.toJson());
-    tmpFile.close();
-
-    if (bytesWritten == -1) {
-        QFile::remove(tmpPath);
+    if (file.write(doc.toJson()) == -1 || !file.commit())
         return false;
-    }
-
-    if (QFile::exists(m_settingsPath))
-        QFile::remove(m_settingsPath);
-
-    if (!QFile::rename(tmpPath, m_settingsPath)) {
-        QFile::remove(tmpPath);
-        return false;
-    }
 
     return true;
 }

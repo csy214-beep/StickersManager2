@@ -14,6 +14,9 @@ GlobalInputListener::~GlobalInputListener() {
 }
 
 bool GlobalInputListener::startListening() {
+    if (keyboardHook)
+        return true;
+
     keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, keyboardHookProc, GetModuleHandle(nullptr), 0);
     if (!keyboardHook) {
         qWarning() << "Failed to install keyboard hook:" << GetLastError();

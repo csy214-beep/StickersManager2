@@ -94,6 +94,39 @@ int main(int argc, char *argv[]) {
         }
     };
 
+    GlobalInputListener *listener = new GlobalInputListener();
+    QObject::connect(listener, &GlobalInputListener::keyReleased, [&](int keyCode, ModifierKeys modifiers) {
+        QString keyName = keyCodeToKeyString(keyCode);
+        QString modifiersName = modifiersToString(modifiers);
+        QString hotkey = modifiersName + "+" + keyName;
+        if (!modifiers) hotkey = keyName;
+
+        for (auto it = hotkeyToWindow.begin(); it != hotkeyToWindow.end(); ++it) {
+            if (ShortcutCompare::compareShortcutKeys(hotkey, it.key())) {
+                MainWindow *window = it.value();
+                if (window->isHidden())
+                    window->showWindow();
+                else
+                    window->hide();
+                break;
+            }
+        }
+    });
+
+    auto syncHotkeyListener = [&]() {
+        if (hotkeyToWindow.isEmpty()) {
+            listener->stopListening();
+            return;
+        }
+        if (listener->isListening())
+            return;
+        if (listener->startListening()) {
+            qDebug() << "Global input listener is running with" << hotkeyToWindow.size() << "hotkeys";
+        } else {
+            qCritical() << "Failed to start global input listening";
+        }
+    };
+
     auto fullReload = [&]() {
         config.loadSettings();
         auto libs = config.getLibraries();
@@ -103,6 +136,7 @@ int main(int argc, char *argv[]) {
         // rescan all existing windows
         for (auto window : windows)
             window->reloadLibrary();
+        syncHotkeyListener();
     };
 
     auto applyChanges = [&]() {
@@ -123,6 +157,7 @@ int main(int argc, char *argv[]) {
 
         rebuildHotkeyMapping(windows, hotkeyToWindow);
         TrayIcon::instance()->updateShowMenu(libs);
+        syncHotkeyListener();
 
         for (auto window : windows)
             window->applySettings();
@@ -168,6 +203,7 @@ int main(int argc, char *argv[]) {
     }
 
     createWindows(libs);
+    syncHotkeyListener();
 
     TrayIcon::instance()->updateShowMenu(libs);
 
@@ -212,34 +248,6 @@ int main(int argc, char *argv[]) {
                     win->hide();
             }
         });
-
-    GlobalInputListener *listener = new GlobalInputListener();
-
-    if (!hotkeyToWindow.isEmpty()) {
-        QObject::connect(listener, &GlobalInputListener::keyReleased, [&](int keyCode, ModifierKeys modifiers) {
-            QString keyName = keyCodeToKeyString(keyCode);
-            QString modifiersName = modifiersToString(modifiers);
-            QString hotkey = modifiersName + "+" + keyName;
-            if (!modifiers) hotkey = keyName;
-
-            for (auto it = hotkeyToWindow.begin(); it != hotkeyToWindow.end(); ++it) {
-                if (ShortcutCompare::compareShortcutKeys(hotkey, it.key())) {
-                    MainWindow *window = it.value();
-                    if (window->isHidden())
-                        window->showWindow();
-                    else
-                        window->hide();
-                    break;
-                }
-            }
-        });
-
-        if (!listener->startListening()) {
-            qCritical() << "Failed to start global input listening";
-        } else {
-            qDebug() << "Global input listener is running with" << hotkeyToWindow.size() << "hotkeys";
-        }
-    }
 
     QObject::connect(TrayIcon::instance()->action_rescan, &QAction::triggered, fullReload);
 

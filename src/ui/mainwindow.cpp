@@ -49,7 +49,9 @@ void MainWindow::applySettings() {
     recalculateGridColumns();
 
     if (!savedSearch.isEmpty()) {
+        m_searchTimer->stop();
         m_searchInput->setText(savedSearch);
+        m_searchTimer->stop();
         performSearch();
     } else if (!savedCat.isEmpty()) {
         showCategory(savedCat);
@@ -125,14 +127,10 @@ QWidget *MainWindow::createStickerPanel() {
     layout->addWidget(m_searchInput);
 
     m_stickerScroll = new QScrollArea();
-    m_stickerScroll->setWidgetResizable(true);
+    m_stickerScroll->setWidgetResizable(false);
     m_stickerScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_stickerScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
     m_stickerContainer = new QWidget();
-    m_gridLayout = new QGridLayout(m_stickerContainer);
-    m_gridLayout->setSpacing(8);
-    m_gridLayout->setAlignment(Qt::AlignTop | Qt::AlignLeft);
-    m_gridLayout->setContentsMargins(5, 5, 5, 5);
     m_stickerScroll->setWidget(m_stickerContainer);
     connect(m_stickerScroll->verticalScrollBar(), &QScrollBar::valueChanged,
             this, &MainWindow::updateCellVisibility);
@@ -212,34 +210,74 @@ void MainWindow::showCategory(const QString &categoryName) {
 
 void MainWindow::displayStickers(const QVector<QString> &stickers)
 {
+    clearStickerCells();
+    m_currentStickers = stickers;
+
+    relayoutGrid();
+    QTimer::singleShot(0, this, &MainWindow::updateCellVisibility);
+}
+
+void MainWindow::clearStickerCells() {
+    for (auto it = m_cellMap.begin(); it != m_cellMap.end(); ++it)
+        delete it.value();
     m_cellMap.clear();
-
-    QLayoutItem *child;
-    while ((child = m_gridLayout->takeAt(0)) != nullptr) {
-        delete child->widget();
-        delete child;
-    }
     m_currentCells.clear();
+}
 
+void MainWindow::relayoutGrid() {
     int cellSize = m_config->getEffectiveGridCellSize(m_libConfig);
-    int minColumns = m_config->getEffectiveGridColumns(m_libConfig);
-    int spacing = m_gridLayout->spacing();
+    int step = cellSize + m_gridSpacing;
     int scrollWidth = m_stickerScroll->viewport()->width();
 
-    int calculatedColumns = scrollWidth / (cellSize + spacing);
-    if (calculatedColumns < 1)
-        calculatedColumns = 1;
-    int columns = qMax(minColumns, calculatedColumns);
+    int cols = scrollWidth / step;
+    if (cols < 1)
+        cols = 1;
+    cols = qMax(m_config->getEffectiveGridColumns(m_libConfig), cols);
+    m_gridColumns = cols;
 
-    for (int i = 0; i < stickers.size(); ++i) {
-        const QString &stickerPath = stickers[i];
-        QFileInfo fileInfo(stickerPath);
-        if (fileInfo.fileName().startsWith(".preview")) continue;
+    int count = m_currentStickers.size();
+    int rows = (count + cols - 1) / cols;
+    int contentW = qMax(scrollWidth, 10 + cols * cellSize + (cols - 1) * m_gridSpacing);
+    int contentH = 10 + rows * cellSize + (rows > 0 ? (rows - 1) * m_gridSpacing : 0);
+    m_stickerContainer->setFixedSize(contentW, contentH);
 
-        int row = i / columns;
-        int col = i % columns;
+    // reposition existing cells for the new column layout
+    for (int i = 0; i < count; ++i) {
+        auto it = m_cellMap.constFind(m_currentStickers[i]);
+        if (it == m_cellMap.constEnd())
+            continue;
+        StickerCell *cell = it.value();
+        int row = i / cols, col = i % cols;
+        cell->move(5 + col * step, 5 + row * step);
+    }
+}
 
-        StickerCell *cell = new StickerCell(stickerPath, cellSize);
+void MainWindow::updateVisibleCells() {
+    if (!m_stickerScroll || m_currentStickers.isEmpty())
+        return;
+
+    int cellSize = m_config->getEffectiveGridCellSize(m_libConfig);
+    int step = cellSize + m_gridSpacing;
+    int cols = m_gridColumns;
+
+    int scrollVal = m_stickerScroll->verticalScrollBar()->value();
+    int viewportH = m_stickerScroll->viewport()->height();
+    const int margin = 1;
+
+    int firstRow = qMax(0, scrollVal / step - margin);
+    int lastRow = (scrollVal + viewportH) / step + margin;
+    int firstIdx = qMax(0, firstRow * cols);
+    int lastIdx = qMin(m_currentStickers.size() - 1, lastRow * cols + cols - 1);
+
+    QSize targetSize(cellSize - 10, cellSize - 10);
+
+    // create cells for the visible range
+    for (int i = firstIdx; i <= lastIdx; ++i) {
+        const QString &path = m_currentStickers[i];
+        if (m_cellMap.contains(path))
+            continue;
+
+        StickerCell *cell = new StickerCell(path, cellSize, m_stickerContainer);
         cell->setAnimateEnabled(m_config->getEffectiveAnimateThumbnails(m_libConfig));
         cell->setShowTag(m_config->getEffectiveShowFileTypeTag(m_libConfig));
         cell->setHighlightEnabled(m_config->getEffectiveHighlightOnClick(m_libConfig));
@@ -247,30 +285,35 @@ void MainWindow::displayStickers(const QVector<QString> &stickers)
         connect(cell, &StickerCell::clicked, this, &MainWindow::onStickerClicked);
         connect(cell, &StickerCell::doubleClicked, this, &MainWindow::onStickerDoubleClicked);
         connect(cell, &StickerCell::rightClicked, this, &MainWindow::onStickerRightClicked);
-        cell->setToolTip(fileInfo.fileName());
+        cell->setToolTip(QFileInfo(path).fileName());
 
-        m_gridLayout->addWidget(cell, row, col);
+        int row = i / cols, col = i % cols;
+        cell->move(5 + col * step, 5 + row * step);
+        cell->show();
+
         m_currentCells.append(cell);
-        m_cellMap[stickerPath] = cell;
+        m_cellMap[path] = cell;
+
+        QPixmap cached = m_thumbnailCache->get(path);
+        if (!cached.isNull() && cached.size() == targetSize) {
+            cell->setThumbnail(cached);
+        } else {
+            m_thumbnailCache->loadThumbnailAsync(path, targetSize);
+        }
     }
 
-    QTimer::singleShot(50, [this, cellSize]()
-                       {
-        QVector<QPair<QString, QSize> > thumbnailsToLoad;
-        QSize targetSize(cellSize - 10, cellSize - 10);
-        for (StickerCell *cell: m_currentCells) {
-            QString filePath = cell->getFilePath();
-
-            QPixmap cached = m_thumbnailCache->get(filePath);
-            if (!cached.isNull()) {
-                cell->setThumbnail(cached);
-            } else {
-                thumbnailsToLoad.append(qMakePair(filePath, targetSize));
-            }
+    // remove cells that scrolled far outside the visible range
+    for (auto it = m_cellMap.begin(); it != m_cellMap.end();) {
+        StickerCell *cell = it.value();
+        int row = (cell->y() - 5) / step;
+        if (row < firstRow || row > lastRow) {
+            it = m_cellMap.erase(it);
+            m_currentCells.removeAll(cell);
+            delete cell;
+        } else {
+            ++it;
         }
-        if (!thumbnailsToLoad.isEmpty()) {
-            m_thumbnailCache->loadThumbnailsAsync(thumbnailsToLoad);
-        } });
+    }
 }
 
 void MainWindow::onThumbnailLoaded(const QString &filePath, const QPixmap &pixmap)
@@ -390,14 +433,13 @@ void MainWindow::onStickerRightClicked(const QString &filePath)
         }
     }
 
-    static ImagePreviewDialog *currentPreview = nullptr;
-    if (currentPreview) {
-        currentPreview->accept();
-        currentPreview = nullptr;
+    if (m_previewDlg) {
+        m_previewDlg->accept();
+        m_previewDlg = nullptr;
     } else {
-        currentPreview = new ImagePreviewDialog(filePath, m_config->getEffectiveAnimatePreview(m_libConfig), this);
-        connect(currentPreview, &ImagePreviewDialog::finished, [&]() { currentPreview = nullptr; });
-        currentPreview->show();
+        m_previewDlg = new ImagePreviewDialog(filePath, m_config->getEffectiveAnimatePreview(m_libConfig), this);
+        connect(m_previewDlg, &ImagePreviewDialog::finished, this, [this]() { m_previewDlg = nullptr; });
+        m_previewDlg->show();
     }
 }
 
@@ -411,6 +453,7 @@ void MainWindow::delayedSearch() {
 
 void MainWindow::updateCellVisibility() {
     if (!m_stickerScroll) return;
+    updateVisibleCells();
     QRect viewportRect = m_stickerScroll->viewport()->rect();
     for (StickerCell *cell : m_currentCells) {
         QRect cellRect(cell->mapTo(m_stickerScroll->viewport(), QPoint(0, 0)), cell->size());
@@ -425,27 +468,23 @@ void MainWindow::resizeEvent(QResizeEvent *event) {
 }
 
 void MainWindow::recalculateGridColumns() {
-    if (!m_stickerScroll || !m_gridLayout)
+    if (!m_stickerScroll || !m_stickerContainer)
         return;
 
     int cellSize = m_config->getEffectiveGridCellSize(m_libConfig);
-    int minColumns = m_config->getEffectiveGridColumns(m_libConfig);
-    int spacing = m_gridLayout->spacing();
+    int step = cellSize + m_gridSpacing;
     int scrollWidth = m_stickerScroll->viewport()->width();
 
-    int calculatedColumns = scrollWidth / (cellSize + spacing);
+    int calculatedColumns = scrollWidth / step;
     if (calculatedColumns < 1)
         calculatedColumns = 1;
-    int newColumns = qMax(minColumns, calculatedColumns);
+    int newColumns = qMax(m_config->getEffectiveGridColumns(m_libConfig), calculatedColumns);
 
-    static int lastColumns = 0;
-
-    if (newColumns != lastColumns && !m_currentCategory.isEmpty()) {
-        lastColumns = newColumns;
-        if (m_searchInput->text().isEmpty()) {
-            showCategory(m_currentCategory);
-        } else {
-            performSearch();
-        }
+    if (newColumns != m_gridColumns) {
+        m_gridColumns = newColumns;
+        relayoutGrid();
+        updateCellVisibility();
+    } else {
+        relayoutGrid();
     }
 }
