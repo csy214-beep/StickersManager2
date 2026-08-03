@@ -26,10 +26,12 @@ DIRS = [
     "log",
     ".stickersmanager",
     ".lupdate",
+    "v1",
 ]
 
 # 要删除的文件（glob 模式）
 FILES = [
+    "*.json",
     "*.a",
     "cmake_install.cmake",
     "CMakeCache.txt",
