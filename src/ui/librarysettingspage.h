@@ -11,10 +11,11 @@ class QLineEdit;
 class QCheckBox;
 class QSpinBox;
 class QComboBox;
+class HotkeyCaptureButton;
 
 struct LibraryEditWidgets {
     QLineEdit *pathEdit;
-    QLineEdit *hotkeyEdit;
+    HotkeyCaptureButton *hotkeyBtn;
     QCheckBox *enabledCheck;
     // overrides
     QCheckBox *useCustomGeometry;
@@ -34,7 +35,7 @@ class LibrarySettingsPage : public QWidget {
     Q_OBJECT
 public:
     explicit LibrarySettingsPage(ConfigManager *config, QWidget *parent = nullptr);
-    void collectToConfig();
+    bool collectToConfig();
 private slots:
     void addLibrary();
     void removeLibrary(int index);
@@ -47,6 +48,7 @@ private:
 
     void buildFromConfig();
     void rebuildList();
+    void validateAllHotkeys();
     LibraryConfig collectOne(int index) const;
 };
 

@@ -47,7 +47,8 @@ SettingsDialog::SettingsDialog(ConfigManager *config, bool keepOpenOnSave, QWidg
 
 void SettingsDialog::onSave() {
     m_generalPage->applyToConfig();
-    m_libraryPage->collectToConfig();
+    if (!m_libraryPage->collectToConfig())
+        return;
     m_basePage->applyToConfig();
 
     m_config->saveConfig();

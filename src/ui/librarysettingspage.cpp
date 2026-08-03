@@ -1,5 +1,7 @@
 #include "librarysettingspage.h"
 #include "configmanager.h"
+#include "hotkeycapture.h"
+#include "convertcodetostring.hpp"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -120,14 +122,24 @@ void LibrarySettingsPage::rebuildList() {
         pathRow->addWidget(browseBtn);
 
         // Row 2: hotkey + enabled
+        int idx = i;
         auto *hkRow = new QHBoxLayout;
-        auto *hotkeyEdit = new QLineEdit(libCfg.hotkey);
-        hotkeyEdit->setPlaceholderText("e.g. Ctrl+Shift+E");
+        auto *hotkeyBtn = new HotkeyCaptureButton;
+        hotkeyBtn->setConflictChecker([this, idx](const QString &hk) {
+            if (hk.isEmpty()) return false;
+            for (int j = 0; j < m_libs.size(); ++j) {
+                if (j == idx || !m_libs[j].hotkeyBtn) continue;
+                if (ShortcutCompare::compareShortcutKeys(hk, m_libs[j].hotkeyBtn->hotkey()))
+                    return true;
+            }
+            return false;
+        });
+        hotkeyBtn->setHotkey(libCfg.hotkey);
         auto *enabledCheck = new QCheckBox("Enabled");
         enabledCheck->setChecked(libCfg.enabled);
         auto *delBtn = new QPushButton("Delete");
         hkRow->addWidget(new QLabel("Hotkey:"));
-        hkRow->addWidget(hotkeyEdit, 1);
+        hkRow->addWidget(hotkeyBtn, 1);
         hkRow->addWidget(enabledCheck);
         hkRow->addWidget(delBtn);
 
@@ -272,7 +284,7 @@ void LibrarySettingsPage::rebuildList() {
 
         LibraryEditWidgets w;
         w.pathEdit = pathEdit;
-        w.hotkeyEdit = hotkeyEdit;
+        w.hotkeyBtn = hotkeyBtn;
         w.enabledCheck = enabledCheck;
         w.useCustomGeometry = useCustomGeometry;
         w.winPosX = winPosX; w.winPosY = winPosY;
@@ -293,7 +305,7 @@ void LibrarySettingsPage::rebuildList() {
         cardLayout->addWidget(overrideToggle);
         cardLayout->addWidget(overrideWidget);
 
-        int idx = i;
+        connect(hotkeyBtn, &HotkeyCaptureButton::hotkeyChanged, this, &LibrarySettingsPage::validateAllHotkeys);
         connect(browseBtn, &QPushButton::clicked, this, [this, idx]() { browseLibrary(idx); });
         connect(delBtn, &QPushButton::clicked, this, [this, idx]() { removeLibrary(idx); });
         connect(overrideToggle, &QPushButton::toggled, this, [this, idx](bool checked) {
@@ -305,6 +317,7 @@ void LibrarySettingsPage::rebuildList() {
 
         m_listLayout->addWidget(card);
     }
+    validateAllHotkeys();
 }
 
 void LibrarySettingsPage::addLibrary() {
@@ -356,7 +369,7 @@ LibraryConfig LibrarySettingsPage::collectOne(int index) const {
     const auto &w = m_libs[index];
     LibraryConfig lib;
     lib.path = w.pathEdit->text();
-    lib.hotkey = w.hotkeyEdit->text();
+    lib.hotkey = w.hotkeyBtn->hotkey();
     lib.enabled = w.enabledCheck->isChecked();
 
     QJsonObject settings;
@@ -397,9 +410,48 @@ LibraryConfig LibrarySettingsPage::collectOne(int index) const {
     return lib;
 }
 
-void LibrarySettingsPage::collectToConfig() {
+void LibrarySettingsPage::validateAllHotkeys() {
+    for (int i = 0; i < m_libs.size(); ++i) {
+        bool conflict = false;
+        if (m_libs[i].hotkeyBtn) {
+            const QString hk = m_libs[i].hotkeyBtn->hotkey();
+            if (!hk.isEmpty()) {
+                for (int j = 0; j < m_libs.size(); ++j) {
+                    if (i == j || !m_libs[j].hotkeyBtn) continue;
+                    if (ShortcutCompare::compareShortcutKeys(hk, m_libs[j].hotkeyBtn->hotkey())) {
+                        conflict = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (m_libs[i].hotkeyBtn)
+            m_libs[i].hotkeyBtn->setConflict(conflict);
+    }
+}
+
+bool LibrarySettingsPage::collectToConfig() {
     QVector<LibraryConfig> libs;
+    libs.reserve(m_libs.size());
     for (int i = 0; i < m_libs.size(); ++i)
         libs.append(collectOne(i));
+
+    for (int i = 0; i < libs.size(); ++i) {
+        if (libs[i].hotkey.isEmpty()) continue;
+        for (int j = i + 1; j < libs.size(); ++j) {
+            if (libs[j].hotkey.isEmpty()) continue;
+            if (ShortcutCompare::compareShortcutKeys(libs[i].hotkey, libs[j].hotkey)) {
+                QMessageBox::warning(this, "Duplicate Hotkey",
+                    QString("Libraries \"%1\" and \"%2\" share the same hotkey: %3\n"
+                            "Change one of them before saving.")
+                        .arg(QFileInfo(libs[i].path).fileName(),
+                             QFileInfo(libs[j].path).fileName(),
+                             libs[i].hotkey));
+                return false;
+            }
+        }
+    }
+
     m_config->setLibraries(libs);
+    return true;
 }

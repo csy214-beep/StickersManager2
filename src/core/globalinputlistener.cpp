@@ -1,42 +1,56 @@
 #include "globalinputlistener.h"
 #include <QDebug>
 
-GlobalInputListener *GlobalInputListener::instance = nullptr;
+QList<GlobalInputListener *> GlobalInputListener::instances;
+HHOOK GlobalInputListener::sharedHook = nullptr;
 
 GlobalInputListener::GlobalInputListener(QObject *parent)
     : QObject(parent), keyboardHook(nullptr) {
-    instance = this;
+    instances.append(this);
 }
 
 GlobalInputListener::~GlobalInputListener() {
+    instances.removeOne(this);
     stopListening();
-    instance = nullptr;
 }
 
 bool GlobalInputListener::startListening() {
     if (keyboardHook)
         return true;
 
-    keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, keyboardHookProc, GetModuleHandle(nullptr), 0);
-    if (!keyboardHook) {
-        qWarning() << "Failed to install keyboard hook:" << GetLastError();
-        return false;
+    if (!sharedHook) {
+        sharedHook = SetWindowsHookEx(WH_KEYBOARD_LL, keyboardHookProc, GetModuleHandle(nullptr), 0);
+        if (!sharedHook) {
+            qWarning() << "Failed to install keyboard hook:" << GetLastError();
+            return false;
+        }
+        qDebug() << "Global input listening started";
     }
 
-    qDebug() << "Global input listening started";
+    keyboardHook = sharedHook;
     return true;
 }
 
 void GlobalInputListener::stopListening() {
-    if (keyboardHook) {
-        UnhookWindowsHookEx(keyboardHook);
-        keyboardHook = nullptr;
+    if (!keyboardHook)
+        return;
+
+    keyboardHook = nullptr;
+    bool anyActive = false;
+    for (GlobalInputListener *listener : instances)
+        if (listener->keyboardHook) {
+            anyActive = true;
+            break;
+        }
+    if (!anyActive && sharedHook) {
+        UnhookWindowsHookEx(sharedHook);
+        sharedHook = nullptr;
+        qDebug() << "Global input listening stopped";
     }
-    qDebug() << "Global input listening stopped";
 }
 
 LRESULT CALLBACK GlobalInputListener::keyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
-    if (nCode >= 0 && instance) {
+    if (nCode >= 0) {
         KBDLLHOOKSTRUCT *kbStruct = reinterpret_cast<KBDLLHOOKSTRUCT *>(lParam);
 
         if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
@@ -50,7 +64,9 @@ LRESULT CALLBACK GlobalInputListener::keyboardHookProc(int nCode, WPARAM wParam,
             if (GetAsyncKeyState(VK_LWIN) & 0x8000 || GetAsyncKeyState(VK_RWIN) & 0x8000)
                 modifiers |= MetaModifier;
 
-            emit instance->keyReleased(kbStruct->vkCode, modifiers);
+            for (GlobalInputListener *listener : instances)
+                if (listener->keyboardHook)
+                    emit listener->keyReleased(kbStruct->vkCode, modifiers);
         }
     }
 

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <QObject>
+#include <QList>
 #include <windows.h>
 
 enum ModifierKey {
@@ -31,5 +32,6 @@ signals:
 private:
     static LRESULT CALLBACK keyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam);
     HHOOK keyboardHook;
-    static GlobalInputListener *instance;
+    static QList<GlobalInputListener *> instances;
+    static HHOOK sharedHook;
 };
