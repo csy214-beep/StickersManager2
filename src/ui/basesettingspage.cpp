@@ -2,6 +2,7 @@
 #include "configmanager.h"
 #include "updatechecker.h"
 #include "appinfo.h"
+#include "launcher.hpp"
 
 #include <QComboBox>
 #include <QFormLayout>
@@ -13,6 +14,8 @@
 #include <QSpinBox>
 #include <QCheckBox>
 #include <QLabel>
+#include <QPushButton>
+#include <QMessageBox>
 
 BaseSettingsPage::BaseSettingsPage(ConfigManager *config, QWidget *parent)
     : QWidget(parent), m_config(config)
@@ -53,17 +56,23 @@ BaseSettingsPage::BaseSettingsPage(ConfigManager *config, QWidget *parent)
 
     // --- Update ---
     auto *updateGroup = new QGroupBox("Update");
-    auto *updateForm = new QFormLayout(updateGroup);
+    auto *updateGroupLayout = new QVBoxLayout(updateGroup);
+    auto *updateForm = new QFormLayout;
+    updateGroupLayout->addLayout(updateForm);
     m_checkOnStartup = new QCheckBox(this);
     m_checkOnStartup->setChecked(config->getCheckForUpdatesOnStartup());
     updateForm->addRow("Check for updates on startup:", m_checkOnStartup);
 
     m_checkStatus = new QLabel(this);
     m_checkStatus->setWordWrap(true);
-    m_checkStatus->setAlignment(Qt::AlignLeft);
+    m_checkStatus->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
     m_checkStatus->hide();
-    updateForm->addRow("", m_checkStatus);
+    m_checkForUpdatesBtn = new QPushButton("Check for Updates", this);
+    updateGroupLayout->addWidget(m_checkForUpdatesBtn);
+    updateGroupLayout->addWidget(m_checkStatus);
     contentLayout->addWidget(updateGroup);
+
+    connect(m_checkForUpdatesBtn, &QPushButton::clicked, this, &BaseSettingsPage::checkForUpdates);
 
     updateCheckStatus();
 
@@ -130,6 +139,41 @@ void BaseSettingsPage::updateCheckStatus() {
         m_checkStatus->setStyleSheet("color: #4caf50;");
     }
     m_checkStatus->show();
+}
+
+void BaseSettingsPage::checkForUpdates() {
+    m_checkStatus->setText("Checking...");
+    m_checkStatus->setStyleSheet(QString());
+    m_checkStatus->show();
+    m_checkForUpdatesBtn->setEnabled(false);
+
+    auto *checker = new UpdateChecker(this);
+    connect(checker, &UpdateChecker::finished, this, [this, checker](bool success, const QString &latestVersion, const QString &error) {
+        checker->deleteLater();
+        m_checkForUpdatesBtn->setEnabled(true);
+
+        if (!success) {
+            m_checkStatus->setText("Error: " + error);
+            m_checkStatus->setStyleSheet("color: #d32f2f;");
+            return;
+        }
+
+        int cmp = UpdateChecker::compareVersions(latestVersion, AppInfo::version());
+        if (cmp <= 0) {
+            QMessageBox::information(this, "Up to Date",
+                                     "You are running the latest version: " + AppInfo::version());
+        } else {
+            auto result = QMessageBox::question(this, "Update Available",
+                "Current version: " + AppInfo::version() + "\n"
+                "Latest version: " + latestVersion + "\n\n"
+                "Open release page?",
+                QMessageBox::Yes | QMessageBox::No);
+            if (result == QMessageBox::Yes)
+                launch(AppInfo::repoUrl() + "/releases/tag/" + latestVersion);
+        }
+        updateCheckStatus();
+    });
+    checker->check();
 }
 
 void BaseSettingsPage::applyToConfig() {

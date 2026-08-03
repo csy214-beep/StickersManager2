@@ -33,6 +33,13 @@ static QSpinBox *makeSpinBox(int min, int max, int val, QWidget *parent) {
     return sb;
 }
 
+static QSpinBox *makePlainSpinBox(int min, int max, int val, QWidget *parent) {
+    auto *sb = new QSpinBox(parent);
+    sb->setRange(min, max);
+    sb->setValue(val);
+    return sb;
+}
+
 static QComboBox *makeBoolCombo(const QString &current, QWidget *parent) {
     auto *cb = new QComboBox(parent);
     cb->addItems(BOOL_ITEMS);
@@ -137,22 +144,34 @@ void LibrarySettingsPage::rebuildList() {
         // -- Window overrides --
         auto *winOv = new QGroupBox("Window");
         auto *winOvForm = new QFormLayout(winOv);
-        QPoint pos = libCfg.settings["window"].toObject()["position"].toArray().size() == 2
-                         ? QPoint(libCfg.settings["window"].toObject()["position"].toArray()[0].toInt(),
-                                  libCfg.settings["window"].toObject()["position"].toArray()[1].toInt())
-                         : QPoint(0, 0);
-        QSize sz = libCfg.settings["window"].toObject()["size"].toArray().size() == 2
-                       ? QSize(libCfg.settings["window"].toObject()["size"].toArray()[0].toInt(),
-                               libCfg.settings["window"].toObject()["size"].toArray()[1].toInt())
-                       : QSize(0, 0);
-        auto *winPosX = makeSpinBox(-9999, 9999, pos.x(), this);
-        auto *winPosY = makeSpinBox(-9999, 9999, pos.y(), this);
-        auto *winW = makeSpinBox(0, 9999, sz.width(), this);
-        auto *winH = makeSpinBox(0, 9999, sz.height(), this);
+        QJsonObject winSettings = libCfg.settings["window"].toObject();
+        QPoint pos = winSettings["position"].toArray().size() == 2
+                         ? QPoint(winSettings["position"].toArray()[0].toInt(),
+                                  winSettings["position"].toArray()[1].toInt())
+                         : m_config->getWindowPosition();
+        QSize sz = winSettings["size"].toArray().size() == 2
+                       ? QSize(winSettings["size"].toArray()[0].toInt(),
+                               winSettings["size"].toArray()[1].toInt())
+                       : m_config->getWindowSize();
+        bool useCustom = winSettings.contains("customGeometry")
+                             ? winSettings["customGeometry"].toBool()
+                             : false;
+        auto *useCustomGeometry = new QCheckBox("Use custom geometry", this);
+        useCustomGeometry->setChecked(useCustom);
+        auto *winPosX = makePlainSpinBox(-9999, 9999, pos.x(), this);
+        auto *winPosY = makePlainSpinBox(-9999, 9999, pos.y(), this);
+        auto *winW = makePlainSpinBox(0, 9999, sz.width(), this);
+        auto *winH = makePlainSpinBox(0, 9999, sz.height(), this);
+        for (QSpinBox *sb : {winPosX, winPosY, winW, winH})
+            sb->setEnabled(useCustom);
+        connect(useCustomGeometry, &QCheckBox::toggled, this, [winPosX, winPosY, winW, winH](bool checked) {
+            for (QSpinBox *sb : {winPosX, winPosY, winW, winH})
+                sb->setEnabled(checked);
+        });
         auto *alwaysOnTop = new QComboBox(this);
         alwaysOnTop->addItems(BOOL_ITEMS);
-        QString aot = libCfg.settings["window"].toObject().contains("alwaysOnTop")
-                          ? boolToCombo(libCfg.settings["window"].toObject()["alwaysOnTop"].toBool())
+        QString aot = winSettings.contains("alwaysOnTop")
+                          ? boolToCombo(winSettings["alwaysOnTop"].toBool())
                           : "General";
         int aotIdx = BOOL_ITEMS.indexOf(aot);
         alwaysOnTop->setCurrentIndex(aotIdx < 0 ? 0 : aotIdx);
@@ -168,6 +187,7 @@ void LibrarySettingsPage::rebuildList() {
         sizeRow->addWidget(new QLabel("H:"));
         sizeRow->addWidget(winH);
 
+        winOvForm->addRow(useCustomGeometry);
         winOvForm->addRow("Position:", posRow);
         winOvForm->addRow("Size:", sizeRow);
         winOvForm->addRow("Always on Top:", alwaysOnTop);
@@ -229,12 +249,32 @@ void LibrarySettingsPage::rebuildList() {
         bhvOvForm->addRow("Show File Type Tag:", ovTag);
         ovLayout->addWidget(bhvOv);
 
+        auto *resetBtn = new QPushButton("Reset", this);
+        connect(resetBtn, &QPushButton::clicked, this, [this, useCustomGeometry, winPosX, winPosY, winW, winH,
+                                                        alwaysOnTop, ovGridCellSize, ovCategoryBtnSize,
+                                                        ovCopyDbl, ovHighlight, ovAnimThumb, ovAnimPrev, ovTag]() {
+            useCustomGeometry->setChecked(false);
+            QPoint defPos = m_config->getWindowPosition();
+            QSize defSize = m_config->getWindowSize();
+            winPosX->setValue(defPos.x());
+            winPosY->setValue(defPos.y());
+            winW->setValue(defSize.width());
+            winH->setValue(defSize.height());
+            alwaysOnTop->setCurrentIndex(0);
+            ovGridCellSize->setValue(0);
+            ovCategoryBtnSize->setValue(0);
+            for (QComboBox *cb : {ovCopyDbl, ovHighlight, ovAnimThumb, ovAnimPrev, ovTag})
+                cb->setCurrentIndex(0);
+        });
+        ovLayout->addWidget(resetBtn);
+
         overrideWidget->setVisible(false);
 
         LibraryEditWidgets w;
         w.pathEdit = pathEdit;
         w.hotkeyEdit = hotkeyEdit;
         w.enabledCheck = enabledCheck;
+        w.useCustomGeometry = useCustomGeometry;
         w.winPosX = winPosX; w.winPosY = winPosY;
         w.winW = winW; w.winH = winH;
         w.alwaysOnTop = alwaysOnTop;
@@ -323,12 +363,11 @@ LibraryConfig LibrarySettingsPage::collectOne(int index) const {
 
     // Window
     QJsonObject win;
-    if (w.winPosX->value() != 0 || w.winPosY->value() != 0) {
+    win["customGeometry"] = w.useCustomGeometry->isChecked();
+    if (w.useCustomGeometry->isChecked()) {
         QJsonArray pos = {w.winPosX->value(), w.winPosY->value()};
-        win["position"] = pos;
-    }
-    if (w.winW->value() != 0 || w.winH->value() != 0) {
         QJsonArray sz = {w.winW->value(), w.winH->value()};
+        win["position"] = pos;
         win["size"] = sz;
     }
     if (w.alwaysOnTop->currentText() != "General")

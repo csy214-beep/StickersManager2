@@ -2,14 +2,11 @@
 #include "appinfo.h"
 #include "configmanager.h"
 #include "launcher.hpp"
-#include "updatechecker.h"
 
 #include <QLabel>
-#include <QPushButton>
 #include <QVBoxLayout>
 #include <QGroupBox>
 #include <QFormLayout>
-#include <QMessageBox>
 #include <QDir>
 #include <QDirIterator>
 #include <QCoreApplication>
@@ -105,54 +102,8 @@ AboutPage::AboutPage(ConfigManager *config, QWidget *parent)
 
     contentLayout->addWidget(storageGroup);
 
-    // Update
-    auto *updateGroup = new QGroupBox("Update");
-    auto *updateLayout = new QVBoxLayout(updateGroup);
-
-    m_checkUpdateBtn = new QPushButton("Check for Updates", this);
-    m_statusLabel = new QLabel(this);
-    m_statusLabel->setWordWrap(true);
-
-    updateLayout->addWidget(m_checkUpdateBtn);
-    updateLayout->addWidget(m_statusLabel);
-    contentLayout->addWidget(updateGroup);
     contentLayout->addStretch();
 
     scrollArea->setWidget(content);
     root->addWidget(scrollArea);
-
-    connect(m_checkUpdateBtn, &QPushButton::clicked, this, &AboutPage::checkForUpdates);
-}
-
-void AboutPage::checkForUpdates() {
-    m_statusLabel->setText("Checking...");
-    m_checkUpdateBtn->setEnabled(false);
-
-    auto *checker = new UpdateChecker(this);
-    connect(checker, &UpdateChecker::finished, this, [this, checker](bool success, const QString &latestVersion, const QString &error) {
-        checker->deleteLater();
-        m_checkUpdateBtn->setEnabled(true);
-
-        if (!success) {
-            m_statusLabel->setText("Error: " + error);
-            return;
-        }
-
-        int cmp = UpdateChecker::compareVersions(latestVersion, AppInfo::version());
-        if (cmp <= 0) {
-            QMessageBox::information(this, "Up to Date",
-                                     "You are running the latest version: " + AppInfo::version());
-            m_statusLabel->setText("Latest: " + AppInfo::version());
-        } else {
-            auto result = QMessageBox::question(this, "Update Available",
-                "Current version: " + AppInfo::version() + "\n"
-                "Latest version: " + latestVersion + "\n\n"
-                "Open release page?",
-                QMessageBox::Yes | QMessageBox::No);
-            if (result == QMessageBox::Yes)
-                launch(AppInfo::repoUrl() + "/releases/tag/" + latestVersion);
-            m_statusLabel->setText("Latest: " + latestVersion);
-        }
-    });
-    checker->check();
 }

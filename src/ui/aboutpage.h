@@ -5,21 +5,16 @@
 
 class ConfigManager;
 class QLabel;
-class QPushButton;
 
 class AboutPage : public QWidget {
     Q_OBJECT
 public:
     explicit AboutPage(ConfigManager *config, QWidget *parent = nullptr);
-private slots:
-    void checkForUpdates();
 private:
     static QString formatSize(qint64 bytes);
     qint64 dirSize(const QString &path) const;
 
     ConfigManager *m_config;
-    QPushButton *m_checkUpdateBtn;
-    QLabel *m_statusLabel;
     QLabel *m_storageLabel;
 };
 

@@ -13,11 +13,14 @@ class QTabWidget;
 class SettingsDialog : public QDialog {
     Q_OBJECT
 public:
-    explicit SettingsDialog(ConfigManager *config, QWidget *parent = nullptr);
+    explicit SettingsDialog(ConfigManager *config, bool keepOpenOnSave = false, QWidget *parent = nullptr);
+signals:
+    void applied();
 private slots:
     void onSave();
 private:
     ConfigManager *m_config;
+    bool m_keepOpenOnSave;
     QTabWidget *m_tabWidget;
     GeneralSettingsPage *m_generalPage;
     LibrarySettingsPage *m_libraryPage;

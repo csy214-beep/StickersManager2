@@ -25,8 +25,11 @@ public:
     ~MainWindow();
 
     void showWindow();
+    void applyWindowSettings();
 
     LibraryConfig getLibraryConfig() const;
+    void updateLibraryConfig(const LibraryConfig &lib);
+    void applySettings();
 
 public slots:
     void reloadLibrary();

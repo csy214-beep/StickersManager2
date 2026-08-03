@@ -105,15 +105,43 @@ int main(int argc, char *argv[]) {
             window->reloadLibrary();
     };
 
+    auto applyChanges = [&]() {
+        config.loadSettings();
+        auto libs = config.getLibraries();
+        removeStaleWindows(libs);
+        createWindows(libs);
+
+        // refresh per-window library config (hotkey, overrides, ...)
+        for (auto it = windows.begin(); it != windows.end(); ++it) {
+            for (const auto &lib : libs) {
+                if (lib.path == it.key()) {
+                    it.value()->updateLibraryConfig(lib);
+                    break;
+                }
+            }
+        }
+
+        rebuildHotkeyMapping(windows, hotkeyToWindow);
+        TrayIcon::instance()->updateShowMenu(libs);
+
+        for (auto window : windows)
+            window->applySettings();
+
+        // visible windows keep their visibility, reapplied with new geometry/flags
+        for (auto it = windows.begin(); it != windows.end(); ++it)
+            if (it.value()->isVisible())
+                it.value()->showWindow();
+    };
+
     auto showSettings = [&](bool toggle = false) {
         if (toggle && settingsDlg && settingsDlg->isVisible()) {
             settingsDlg->close();
             return;
         }
         if (!settingsDlg) {
-            auto *dlg = new SettingsDialog(&config);
+            auto *dlg = new SettingsDialog(&config, true);
             dlg->setAttribute(Qt::WA_DeleteOnClose);
-            QObject::connect(dlg, &QDialog::accepted, fullReload);
+            QObject::connect(dlg, &SettingsDialog::applied, applyChanges);
             QObject::connect(dlg, &QDialog::finished, [&]() { settingsDlg = nullptr; });
             settingsDlg = dlg;
         }
@@ -132,7 +160,7 @@ int main(int argc, char *argv[]) {
         }
 
     if (!hasLib) {
-        SettingsDialog tmpDlg(&config, nullptr);
+        SettingsDialog tmpDlg(&config, false, nullptr);
         if (tmpDlg.exec() == QDialog::Accepted) {
             config.loadSettings();
             libs = config.getLibraries();
@@ -226,7 +254,7 @@ int main(int argc, char *argv[]) {
         QObject::connect(checker, &UpdateChecker::finished, [checker](bool success, const QString &latestVersion, const QString &) {
             if (success && UpdateChecker::compareVersions(latestVersion, AppInfo::version()) > 0) {
                 TrayIcon::showMessage("Update Available",
-                    "Stickers Manager " + latestVersion + " is now available.\n" + AppInfo::repoUrl());
+                                      "Stickers Manager " + latestVersion + " is now available.");
             }
             checker->deleteLater();
         });

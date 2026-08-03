@@ -34,6 +34,31 @@ LibraryConfig MainWindow::getLibraryConfig() const {
     return m_libConfig;
 }
 
+void MainWindow::updateLibraryConfig(const LibraryConfig &lib) {
+    m_libConfig = lib;
+}
+
+void MainWindow::applySettings() {
+    QString savedSearch = m_searchInput->text();
+    QString savedCatSearch = m_categorySearchInput->text();
+    QString savedCat = m_currentCategory;
+
+    m_thumbnailCache->setMaxSize(m_config->getEffectiveThumbnailCacheSize(m_libConfig));
+
+    populateCategories();
+    recalculateGridColumns();
+
+    if (!savedSearch.isEmpty()) {
+        m_searchInput->setText(savedSearch);
+        performSearch();
+    } else if (!savedCat.isEmpty()) {
+        showCategory(savedCat);
+    }
+    m_categorySearchInput->setText(savedCatSearch);
+
+    QTimer::singleShot(0, this, &MainWindow::updateCellVisibility);
+}
+
 void MainWindow::initUI() {
     setWindowTitle(AppInfo::name() + " " + AppInfo::version());
     QSize windowSize = m_config->getEffectiveWindowSize(m_libConfig);
@@ -274,22 +299,26 @@ void MainWindow::handleThumbnailLoaded(const QString &filePath, const QPixmap &p
     }
 }
 
+void MainWindow::applyWindowSettings() {
+    setWindowFlag(Qt::WindowStaysOnTopHint,
+                  m_config->getEffectiveAlwaysOnTop(m_libConfig));
+    setGeometry(
+        m_config->getEffectiveWindowPosition(m_libConfig).x(),
+        m_config->getEffectiveWindowPosition(m_libConfig).y(),
+        m_config->getEffectiveWindowSize(m_libConfig).width(),
+        m_config->getEffectiveWindowSize(m_libConfig).height()
+    );
+}
+
 void MainWindow::showWindow() {
+    applyWindowSettings();
     if (isHidden()) {
-        setWindowFlag(Qt::WindowStaysOnTopHint,
-                      m_config->getEffectiveAlwaysOnTop(m_libConfig));
-        setGeometry(
-            m_config->getEffectiveWindowPosition(m_libConfig).x(),
-            m_config->getEffectiveWindowPosition(m_libConfig).y(),
-            m_config->getEffectiveWindowSize(m_libConfig).width(),
-            m_config->getEffectiveWindowSize(m_libConfig).height()
-        );
         update();
         show();
         recalculateGridColumns();
-        raise();
-        activateWindow();
     }
+    raise();
+    activateWindow();
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {

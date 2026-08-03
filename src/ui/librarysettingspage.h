@@ -17,6 +17,7 @@ struct LibraryEditWidgets {
     QLineEdit *hotkeyEdit;
     QCheckBox *enabledCheck;
     // overrides
+    QCheckBox *useCustomGeometry;
     QSpinBox *winPosX, *winPosY, *winW, *winH;
     QComboBox *alwaysOnTop;
     QSpinBox *gridCellSize;

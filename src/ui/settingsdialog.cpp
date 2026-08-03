@@ -10,8 +10,8 @@
 #include <QPushButton>
 #include <QHBoxLayout>
 
-SettingsDialog::SettingsDialog(ConfigManager *config, QWidget *parent)
-    : QDialog(parent), m_config(config)
+SettingsDialog::SettingsDialog(ConfigManager *config, bool keepOpenOnSave, QWidget *parent)
+    : QDialog(parent), m_config(config), m_keepOpenOnSave(keepOpenOnSave)
 {
     setWindowTitle("Settings");
     setMinimumSize(600, 500);
@@ -52,5 +52,8 @@ void SettingsDialog::onSave() {
 
     m_config->saveConfig();
     m_config->saveSettings();
-    accept();
+    if (m_keepOpenOnSave)
+        emit applied();
+    else
+        accept();
 }

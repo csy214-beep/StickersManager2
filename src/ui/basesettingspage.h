@@ -8,12 +8,15 @@ class QComboBox;
 class QSpinBox;
 class QCheckBox;
 class QLabel;
+class QPushButton;
 
 class BaseSettingsPage : public QWidget {
     Q_OBJECT
 public:
     explicit BaseSettingsPage(ConfigManager *config, QWidget *parent = nullptr);
     void applyToConfig();
+private slots:
+    void checkForUpdates();
 private:
     void updateCheckStatus();
     ConfigManager *m_config;
@@ -22,6 +25,7 @@ private:
     QSpinBox *m_thumbnailCacheSize;
     QCheckBox *m_checkOnStartup;
     QLabel *m_checkStatus;
+    QPushButton *m_checkForUpdatesBtn;
     void populateTargets();
 };
 
