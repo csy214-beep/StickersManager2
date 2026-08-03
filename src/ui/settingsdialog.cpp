@@ -13,6 +13,7 @@
 SettingsDialog::SettingsDialog(ConfigManager *config, bool keepOpenOnSave, QWidget *parent)
     : QDialog(parent), m_config(config), m_keepOpenOnSave(keepOpenOnSave)
 {
+    setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
     setWindowTitle("Settings");
     setMinimumSize(600, 500);
 
