@@ -2,16 +2,13 @@
 #include "appinfo.h"
 #include "configmanager.h"
 #include "launcher.hpp"
+#include "updatechecker.h"
 
 #include <QLabel>
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QGroupBox>
 #include <QFormLayout>
-#include <QNetworkAccessManager>
-#include <QNetworkReply>
-#include <QJsonDocument>
-#include <QJsonObject>
 #include <QMessageBox>
 #include <QDir>
 #include <QDirIterator>
@@ -23,23 +20,6 @@ QString AboutPage::formatSize(qint64 bytes) {
     if (bytes < 1024 * 1024) return QString::number(bytes / 1024.0, 'f', 1) + " KB";
     if (bytes < 1024LL * 1024 * 1024) return QString::number(bytes / (1024.0 * 1024.0), 'f', 1) + " MB";
     return QString::number(bytes / (1024.0 * 1024.0 * 1024.0), 'f', 2) + " GB";
-}
-
-int AboutPage::compareVersions(const QString &a, const QString &b) {
-    auto parts = [](const QString &v) {
-        QString s = v;
-        if (s.startsWith('v')) s = s.mid(1);
-        QStringList p = s.split('.');
-        return QVector<int>{p.size() > 0 ? p[0].toInt() : 0,
-                           p.size() > 1 ? p[1].toInt() : 0,
-                           p.size() > 2 ? p[2].toInt() : 0};
-    };
-    QVector<int> va = parts(a), vb = parts(b);
-    for (int i = 0; i < 3; ++i) {
-        if (va[i] < vb[i]) return -1;
-        if (va[i] > vb[i]) return 1;
-    }
-    return 0;
 }
 
 qint64 AboutPage::dirSize(const QString &path) const {
@@ -148,39 +128,17 @@ void AboutPage::checkForUpdates() {
     m_statusLabel->setText("Checking...");
     m_checkUpdateBtn->setEnabled(false);
 
-    auto *manager = new QNetworkAccessManager(this);
-    QNetworkRequest request(QUrl(AppInfo::apiReleasesUrl()));
-    request.setRawHeader("User-Agent", "StickersManager");
-
-    auto *reply = manager->get(request);
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        reply->deleteLater();
-        reply->manager()->deleteLater();
+    auto *checker = new UpdateChecker(this);
+    connect(checker, &UpdateChecker::finished, this, [this, checker](bool success, const QString &latestVersion, const QString &error) {
+        checker->deleteLater();
         m_checkUpdateBtn->setEnabled(true);
 
-        if (reply->error() != QNetworkReply::NoError) {
-            m_statusLabel->setText("Network error: " + reply->errorString());
+        if (!success) {
+            m_statusLabel->setText("Error: " + error);
             return;
         }
 
-        QByteArray data = reply->readAll();
-        QJsonDocument doc = QJsonDocument::fromJson(data);
-        if (doc.isNull() || !doc.isObject()) {
-            m_statusLabel->setText("Failed to parse response.");
-            return;
-        }
-
-        QJsonObject obj = doc.object();
-        QString latestVersion = obj["tag_name"].toString();
-        if (latestVersion.isEmpty())
-            latestVersion = obj["name"].toString();
-
-        if (latestVersion.isEmpty()) {
-            m_statusLabel->setText("Could not determine latest version.");
-            return;
-        }
-
-        int cmp = compareVersions(latestVersion, AppInfo::version());
+        int cmp = UpdateChecker::compareVersions(latestVersion, AppInfo::version());
         if (cmp <= 0) {
             QMessageBox::information(this, "Up to Date",
                                      "You are running the latest version: " + AppInfo::version());
@@ -196,4 +154,5 @@ void AboutPage::checkForUpdates() {
             m_statusLabel->setText("Latest: " + latestVersion);
         }
     });
+    checker->check();
 }

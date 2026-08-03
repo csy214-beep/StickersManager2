@@ -1,5 +1,7 @@
 #include "basesettingspage.h"
 #include "configmanager.h"
+#include "updatechecker.h"
+#include "appinfo.h"
 
 #include <QComboBox>
 #include <QFormLayout>
@@ -9,6 +11,8 @@
 #include <QFileInfo>
 #include <QDir>
 #include <QSpinBox>
+#include <QCheckBox>
+#include <QLabel>
 
 BaseSettingsPage::BaseSettingsPage(ConfigManager *config, QWidget *parent)
     : QWidget(parent), m_config(config)
@@ -47,6 +51,22 @@ BaseSettingsPage::BaseSettingsPage(ConfigManager *config, QWidget *parent)
     perfForm->addRow("Thumbnail Cache Size:", m_thumbnailCacheSize);
     contentLayout->addWidget(perfGroup);
 
+    // --- Update ---
+    auto *updateGroup = new QGroupBox("Update");
+    auto *updateForm = new QFormLayout(updateGroup);
+    m_checkOnStartup = new QCheckBox(this);
+    m_checkOnStartup->setChecked(config->getCheckForUpdatesOnStartup());
+    updateForm->addRow("Check for updates on startup:", m_checkOnStartup);
+
+    m_checkStatus = new QLabel(this);
+    m_checkStatus->setWordWrap(true);
+    m_checkStatus->setAlignment(Qt::AlignLeft);
+    m_checkStatus->hide();
+    updateForm->addRow("", m_checkStatus);
+    contentLayout->addWidget(updateGroup);
+
+    updateCheckStatus();
+
     contentLayout->addStretch();
 
     scrollArea->setWidget(content);
@@ -77,6 +97,41 @@ void BaseSettingsPage::populateTargets() {
     }
 }
 
+void BaseSettingsPage::updateCheckStatus() {
+    if (!m_config->getCheckForUpdatesOnStartup()) {
+        m_checkStatus->hide();
+        return;
+    }
+
+    const UpdateChecker::Result &r = UpdateChecker::lastResult;
+
+    if (!r.success && r.error.isEmpty()) {
+        // never checked yet (e.g. settings opened before the startup check finished)
+        auto *checker = new UpdateChecker(this);
+        connect(checker, &UpdateChecker::finished, this, [this, checker](bool, const QString &, const QString &) {
+            checker->deleteLater();
+            updateCheckStatus();
+        });
+        checker->check();
+        m_checkStatus->setText("Checking...");
+        m_checkStatus->setStyleSheet(QString());
+        m_checkStatus->show();
+        return;
+    }
+
+    if (!r.success) return; // silent on failure
+
+    bool newer = UpdateChecker::compareVersions(r.latestVersion, AppInfo::version()) > 0;
+    if (newer) {
+        m_checkStatus->setText("Update available: " + r.latestVersion);
+        m_checkStatus->setStyleSheet("color: #ff9800;");
+    } else {
+        m_checkStatus->setText("You are running the latest version: " + AppInfo::version());
+        m_checkStatus->setStyleSheet("color: #4caf50;");
+    }
+    m_checkStatus->show();
+}
+
 void BaseSettingsPage::applyToConfig() {
     QString val = m_doubleClickTarget->currentData().toString();
     if (val.isEmpty())
@@ -84,4 +139,5 @@ void BaseSettingsPage::applyToConfig() {
     m_config->setDoubleClickTarget(val);
     m_config->setSearchDelayMs(m_searchDelayMs->value());
     m_config->setThumbnailCacheSize(m_thumbnailCacheSize->value());
+    m_config->setCheckForUpdatesOnStartup(m_checkOnStartup->isChecked());
 }

@@ -18,6 +18,8 @@
 #include "convertcodetostring.hpp"
 #include "launcher.hpp"
 #include "settingsdialog.h"
+#include "updatechecker.h"
+#include "appinfo.h"
 
 #define DEBUG_MODE false
 
@@ -218,5 +220,18 @@ int main(int argc, char *argv[]) {
     });
 
     TrayIcon::instance()->show();
+
+    if (config.getCheckForUpdatesOnStartup()) {
+        auto *checker = new UpdateChecker();
+        QObject::connect(checker, &UpdateChecker::finished, [checker](bool success, const QString &latestVersion, const QString &) {
+            if (success && UpdateChecker::compareVersions(latestVersion, AppInfo::version()) > 0) {
+                TrayIcon::showMessage("Update Available",
+                    "Stickers Manager " + latestVersion + " is now available.\n" + AppInfo::repoUrl());
+            }
+            checker->deleteLater();
+        });
+        checker->check();
+    }
+
     return app.exec();
 }

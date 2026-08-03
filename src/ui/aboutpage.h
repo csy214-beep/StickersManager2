@@ -15,7 +15,6 @@ private slots:
     void checkForUpdates();
 private:
     static QString formatSize(qint64 bytes);
-    static int compareVersions(const QString &a, const QString &b);
     qint64 dirSize(const QString &path) const;
 
     ConfigManager *m_config;

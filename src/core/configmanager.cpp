@@ -101,6 +101,7 @@ bool ConfigManager::loadSettings() {
         m_settings["doubleClickTarget"] = QString("settings");
         m_settings["searchDelayMs"] = 300;
         m_settings["thumbnailCacheSize"] = 200;
+        m_settings["checkForUpdatesOnStartup"] = true;
         return false;
     }
 
@@ -111,6 +112,7 @@ bool ConfigManager::loadSettings() {
     if (doc.isNull()) {
         m_settings = QJsonObject();
         m_settings["doubleClickTarget"] = QString("settings");
+        m_settings["checkForUpdatesOnStartup"] = true;
         return false;
     }
 
@@ -150,6 +152,14 @@ QString ConfigManager::getDoubleClickTarget() const {
 
 void ConfigManager::setDoubleClickTarget(const QString &v) {
     m_settings["doubleClickTarget"] = v;
+}
+
+bool ConfigManager::getCheckForUpdatesOnStartup() const {
+    return m_settings["checkForUpdatesOnStartup"].toBool(true);
+}
+
+void ConfigManager::setCheckForUpdatesOnStartup(bool v) {
+    m_settings["checkForUpdatesOnStartup"] = v;
 }
 
 QJsonObject ConfigManager::libCatSettings(const LibraryConfig &lib, const QString &category) {

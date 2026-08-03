@@ -51,6 +51,9 @@ public:
     QString getDoubleClickTarget() const;
     void setDoubleClickTarget(const QString &v);
 
+    bool getCheckForUpdatesOnStartup() const;
+    void setCheckForUpdatesOnStartup(bool v);
+
     // General defaults
     QSize getWindowSize() const;
     QPoint getWindowPosition() const;
