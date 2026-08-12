@@ -92,14 +92,15 @@ void BaseSettingsPage::populateTargets() {
     for (const auto &lib : libs) {
         QString name = QFileInfo(lib.path).fileName();
         if (!name.isEmpty())
-            m_doubleClickTarget->addItem(name, lib.path);
+            m_doubleClickTarget->addItem(name, name);
     }
 
     // select current
     QString current = m_config->getDoubleClickTarget();
     for (int i = 0; i < m_doubleClickTarget->count(); ++i) {
         if (m_doubleClickTarget->itemData(i).toString() == current ||
-            m_doubleClickTarget->itemText(i) == current) {
+            m_doubleClickTarget->itemText(i) == current ||
+            QFileInfo(current).fileName() == m_doubleClickTarget->itemText(i)) {
             m_doubleClickTarget->setCurrentIndex(i);
             break;
         }
