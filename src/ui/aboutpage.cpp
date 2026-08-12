@@ -94,7 +94,7 @@ AboutPage::AboutPage(ConfigManager *config, QWidget *parent)
     qint64 libBytes = 0;
     auto libs = m_config->getLibraries();
     for (const auto &lib : libs) {
-        if (!lib.enabled || lib.path.isEmpty()) continue;
+        if (lib.path.isEmpty()) continue;
         libBytes += dirSize(lib.path);
     }
     m_storageLabel = new QLabel(formatSize(libBytes), this);

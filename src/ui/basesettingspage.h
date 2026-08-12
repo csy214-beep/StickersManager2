@@ -15,6 +15,7 @@ class BaseSettingsPage : public QWidget {
 public:
     explicit BaseSettingsPage(ConfigManager *config, QWidget *parent = nullptr);
     void applyToConfig();
+    void refreshTargets();
 private slots:
     void checkForUpdates();
 private:

@@ -87,20 +87,32 @@ void BaseSettingsPage::populateTargets() {
     m_doubleClickTarget->addItem("Show first library", "first-library");
     m_doubleClickTarget->addItem("Show settings", "settings");
 
-    // add each library dir name
+    // add each library (data = stable library id)
     auto libs = m_config->getLibraries();
     for (const auto &lib : libs) {
         QString name = QFileInfo(lib.path).fileName();
         if (!name.isEmpty())
-            m_doubleClickTarget->addItem(name, name);
+            m_doubleClickTarget->addItem(name, QString::number(lib.id));
     }
 
-    // select current
+    // select current: id match first, then legacy dirName / full path
     QString current = m_config->getDoubleClickTarget();
     for (int i = 0; i < m_doubleClickTarget->count(); ++i) {
         if (m_doubleClickTarget->itemData(i).toString() == current ||
             m_doubleClickTarget->itemText(i) == current ||
             QFileInfo(current).fileName() == m_doubleClickTarget->itemText(i)) {
+            m_doubleClickTarget->setCurrentIndex(i);
+            break;
+        }
+    }
+}
+
+void BaseSettingsPage::refreshTargets() {
+    QString current = m_doubleClickTarget->currentData().toString();
+    populateTargets();
+    // keep the user's previous selection when it still exists
+    for (int i = 0; i < m_doubleClickTarget->count(); ++i) {
+        if (m_doubleClickTarget->itemData(i).toString() == current) {
             m_doubleClickTarget->setCurrentIndex(i);
             break;
         }

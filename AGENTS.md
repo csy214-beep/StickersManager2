@@ -12,11 +12,11 @@ cd build && cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug && cmake --bu
 ## Architecture
 - **Single instance**: `QLockFile` at `%TEMP%/<user>_Stickers Manager.lock` (`main.cpp:44`)
 - **Config** (`[EXE_DIR]/.stickersmanager/`, relative to exe):
-  - `config.json`: `{"default":{ui,behavior,window,performance},"libraries":[{path,hotkey,enabled,settings:{}}]}` — no version field
-  - `settings.json`: `doubleClickTarget` (`"first-library"`/`"settings"`/dirName), `searchDelayMs`, `thumbnailCacheSize`, `checkForUpdatesOnStartup`
+  - `config.json`: `{"default":{ui,behavior,window,performance},"libraries":[{id,path,hotkey,enabled,settings:{}}]}` — no version field; `id` is the **order marker** (0..n-1, contiguous): `getLibraries()` sorts by id, missing ids (legacy) get array position, drag-reorder in the Libraries tab renumbers ids; `enabled` = **hotkey switch only** ("Enable Hotkey" checkbox) — does NOT affect window/tray/menu/double-click target/storage stats, only global-hotkey registration and hotkey-conflict computation
+  - `settings.json`: `doubleClickTarget` (`"first-library"`/`"settings"`/library id string; legacy dirName/path values still matched as fallback), `searchDelayMs`, `thumbnailCacheSize`, `checkForUpdatesOnStartup`
 - **No auto-save** — config written on explicit `saveConfig()` / `saveSettings()` only (Settings "Save & Reload" button, `settingsdialog.cpp:35`)
-- **First-launch** — if no enabled library with existing path, modal `SettingsDialog tmpDlg.exec()` (`main.cpp:197-203`) blocks before any window/tray
-- **Multi-window**: one `MainWindow` per enabled library; title `"Stickers Manager - <dirName>"` (`main.cpp:72`)
+- **First-launch** — if no library with existing path, modal `SettingsDialog tmpDlg.exec()` (`main.cpp:197-203`) blocks before any window/tray
+- **Multi-window**: one `MainWindow` per library with non-empty path (regardless of hotkey switch); title `"Stickers Manager - <dirName>"` (`main.cpp:72`)
 - **Global hotkeys**: Win32 `SetWindowsHookEx(WH_KEYBOARD_LL)` via `GlobalInputListener`; key↔string mapping + `ShortcutCompare::compareShortcutKeys` in `convertcodetostring.hpp`; listener auto-starts/stops when hotkey map empties (`main.cpp:116-128`)
 - **Two runtime reload paths** (don't confuse them):
   - `fullReload` (`main.cpp:130`) — tray **Rescan**: reloads config, removes stale windows, creates new ones, rescans all libs via `reloadLibrary()`

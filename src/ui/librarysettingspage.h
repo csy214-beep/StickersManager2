@@ -14,6 +14,7 @@ class QComboBox;
 class HotkeyCaptureButton;
 
 struct LibraryEditWidgets {
+    int libId = -1;
     QLineEdit *pathEdit;
     HotkeyCaptureButton *hotkeyBtn;
     QCheckBox *enabledCheck;
@@ -49,6 +50,8 @@ private:
     void buildFromConfig();
     void rebuildList();
     void validateAllHotkeys();
+    void swapLibraries(int a, int b);
+    void syncCardIndices();
     LibraryConfig collectOne(int index) const;
 };
 

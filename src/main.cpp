@@ -27,7 +27,7 @@ static void rebuildHotkeyMapping(const QMap<QString, MainWindow *> &windows, QMa
     hotkeyToWindow.clear();
     for (auto it = windows.begin(); it != windows.end(); ++it) {
         LibraryConfig libConfig = it.value()->getLibraryConfig();
-        if (!libConfig.hotkey.isEmpty()) {
+        if (libConfig.enabled && !libConfig.hotkey.isEmpty()) {
             hotkeyToWindow[libConfig.hotkey] = it.value();
         }
     }
@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
 
     auto createWindows = [&](const QVector<LibraryConfig> &libs) {
         for (const auto &lib : libs) {
-            if (!lib.enabled || lib.path.isEmpty())
+            if (lib.path.isEmpty())
                 continue;
             if (!windows.contains(lib.path)) {
                 auto *window = new MainWindow(&config, lib);
@@ -82,7 +82,7 @@ int main(int argc, char *argv[]) {
     auto removeStaleWindows = [&](const QVector<LibraryConfig> &libs) {
         QStringList active;
         for (const auto &lib : libs)
-            if (lib.enabled && !lib.path.isEmpty())
+            if (!lib.path.isEmpty())
                 active.append(lib.path);
         QStringList toRemove;
         for (auto it = windows.begin(); it != windows.end(); ++it)
@@ -189,7 +189,7 @@ int main(int argc, char *argv[]) {
     auto libs = config.getLibraries();
     bool hasLib = false;
     for (const auto &lib : libs)
-        if (lib.enabled && !lib.path.isEmpty() && QDir(lib.path).exists()) {
+        if (!lib.path.isEmpty() && QDir(lib.path).exists()) {
             hasLib = true;
             break;
         }
@@ -231,12 +231,30 @@ int main(int argc, char *argv[]) {
 
             MainWindow *win = nullptr;
             if (target == "first-library" || target.isEmpty()) {
-                win = windows.isEmpty() ? nullptr : windows.first();
-            } else {
-                for (auto it = windows.begin(); it != windows.end(); ++it) {
-                    if (QFileInfo(it.key()).fileName() == target) {
-                        win = it.value();
+                // first library in id (config) order
+                for (const auto &lib : config.getLibraries()) {
+                    if (windows.contains(lib.path)) {
+                        win = windows[lib.path];
                         break;
+                    }
+                }
+            } else {
+                bool isId = false;
+                int targetId = target.toInt(&isId);
+                if (isId) {
+                    for (auto it = windows.cbegin(); it != windows.cend(); ++it) {
+                        if (it.value()->getLibraryConfig().id == targetId) {
+                            win = it.value();
+                            break;
+                        }
+                    }
+                } else {
+                    // legacy config: target stored as directory name
+                    for (auto it = windows.cbegin(); it != windows.cend(); ++it) {
+                        if (QFileInfo(it.key()).fileName() == target) {
+                            win = it.value();
+                            break;
+                        }
                     }
                 }
             }

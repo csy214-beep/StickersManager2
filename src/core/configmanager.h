@@ -15,6 +15,7 @@
 
 struct LibraryConfig
 {
+    int id = -1;
     QString path;
     QString hotkey;
     bool enabled;

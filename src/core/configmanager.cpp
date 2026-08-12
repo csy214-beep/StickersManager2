@@ -4,6 +4,7 @@
 #include <QDebug>
 #include <QJsonArray>
 #include <QSaveFile>
+#include <algorithm>
 
 ConfigManager::ConfigManager(QObject *parent)
     : QObject(parent) {
@@ -134,22 +135,35 @@ QJsonObject ConfigManager::libCatSettings(const LibraryConfig &lib, const QStrin
 QVector<LibraryConfig> ConfigManager::getLibraries() const {
     QVector<LibraryConfig> result;
     QJsonArray libArray = m_config["libraries"].toArray();
+    result.reserve(libArray.size());
     for (const QJsonValue &val: libArray) {
         QJsonObject obj = val.toObject();
         LibraryConfig lib;
+        lib.id = obj["id"].toInt(-1);
         lib.path = obj["path"].toString();
         lib.hotkey = obj["hotkey"].toString();
         lib.enabled = obj["enabled"].toBool(true);
         lib.settings = obj["settings"].toObject();
         result.append(lib);
     }
+    // legacy migration: entries without id get their array position
+    for (int i = 0; i < result.size(); ++i)
+        if (result[i].id < 0)
+            result[i].id = i;
+    // id is the authoritative order marker
+    std::sort(result.begin(), result.end(),
+              [](const LibraryConfig &a, const LibraryConfig &b) { return a.id < b.id; });
     return result;
 }
 
 void ConfigManager::setLibraries(const QVector<LibraryConfig> &libs) {
+    QVector<LibraryConfig> sorted = libs;
+    std::sort(sorted.begin(), sorted.end(),
+              [](const LibraryConfig &a, const LibraryConfig &b) { return a.id < b.id; });
     QJsonArray libArray;
-    for (const LibraryConfig &lib: libs) {
+    for (const LibraryConfig &lib: sorted) {
         QJsonObject obj;
+        obj["id"] = lib.id;
         obj["path"] = lib.path;
         obj["hotkey"] = lib.hotkey;
         obj["enabled"] = lib.enabled;

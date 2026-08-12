@@ -33,6 +33,13 @@ SettingsDialog::SettingsDialog(ConfigManager *config, bool keepOpenOnSave, QWidg
 
     layout->addWidget(m_tabWidget);
 
+    // library ids are renumbered on drag-reorder; refresh the target combo when Base is shown
+    int baseTabIndex = m_tabWidget->indexOf(m_basePage);
+    connect(m_tabWidget, &QTabWidget::currentChanged, this, [this, baseTabIndex](int index) {
+        if (index == baseTabIndex)
+            m_basePage->refreshTargets();
+    });
+
     auto *saveBtn = new QPushButton("Save && Reload");
     auto *cancelBtn = new QPushButton("Cancel");
 

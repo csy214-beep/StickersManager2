@@ -19,9 +19,19 @@
 #include <QFileInfo>
 #include <QLabel>
 #include <QScrollArea>
+#include <QScrollBar>
 #include <QStyle>
 #include <QMessageBox>
 #include <QSize>
+#include <QDrag>
+#include <QMimeData>
+#include <QDragEnterEvent>
+#include <QDragMoveEvent>
+#include <QDropEvent>
+#include <QMouseEvent>
+#include <QApplication>
+#include <QTimer>
+#include <functional>
 
 static const QStringList BOOL_ITEMS = {"General", "On", "Off"};
 static const QStringList BOOL_KEYS = {"copyOnDoubleClick", "highlightOnClick",
@@ -59,6 +69,192 @@ static int comboToBool(const QString &s, bool def) {
     return def ? -1 : -1; // -1 means "use default"
 }
 
+static const char *kLibraryDragMime = "application/x-stickersmanager-library";
+static const char *kCardDragStyle = "QGroupBox { border: 2px dashed #3a7bd5; background: rgba(58, 123, 213, 0.08); }";
+static const char *kCardFlashStyle = "QGroupBox { border: 2px solid #3a7bd5; background: rgba(58, 123, 213, 0.10); }";
+
+class DraggableLibraryCard : public QGroupBox
+{
+public:
+    explicit DraggableLibraryCard(QWidget *parent = nullptr) : QGroupBox(parent) {}
+
+    int m_listIndex = -1;
+    std::function<void(int, int)> reorderCallback;
+
+    void setDragging(bool dragging)
+    {
+        m_dragging = dragging;
+        if (dragging)
+            setStyleSheet(QLatin1String(kCardDragStyle));
+        else
+            setStyleSheet(m_flash ? QLatin1String(kCardFlashStyle) : QString());
+    }
+
+    void flashDrop()
+    {
+        m_flash = true;
+        setStyleSheet(QLatin1String(kCardFlashStyle));
+        QTimer::singleShot(450, this, [this]()
+                           {
+            m_flash = false;
+            if (!m_dragging)
+                setStyleSheet(QString()); });
+    }
+
+protected:
+    bool eventFilter(QObject *watched, QEvent *event) override
+    {
+        if (event->type() == QEvent::MouseButtonPress ||
+            event->type() == QEvent::MouseMove ||
+            event->type() == QEvent::MouseButtonRelease)
+        {
+            handleMouseEvent(static_cast<QMouseEvent *>(event));
+        }
+        return QGroupBox::eventFilter(watched, event);
+    }
+
+    void mousePressEvent(QMouseEvent *event) override
+    {
+        handleMouseEvent(event);
+        QGroupBox::mousePressEvent(event);
+    }
+
+    void mouseMoveEvent(QMouseEvent *event) override
+    {
+        handleMouseEvent(event);
+        QGroupBox::mouseMoveEvent(event);
+    }
+
+private:
+    void handleMouseEvent(QMouseEvent *event)
+    {
+        if (event->type() == QEvent::MouseButtonPress && event->button() == Qt::LeftButton)
+        {
+            m_pressPos = event->globalPosition();
+        }
+        else if (event->type() == QEvent::MouseMove &&
+                 (event->buttons() & Qt::LeftButton) &&
+                 (event->globalPosition() - m_pressPos).manhattanLength() >= QApplication::startDragDistance())
+        {
+            auto *mime = new QMimeData;
+            mime->setData(QLatin1String(kLibraryDragMime), QByteArray::number(m_listIndex));
+            auto *drag = new QDrag(this);
+            drag->setMimeData(mime);
+            int origIndex = m_listIndex;
+            setDragging(true);
+            Qt::DropAction action = drag->exec(Qt::MoveAction);
+            setDragging(false);
+            if (action == Qt::IgnoreAction && m_listIndex != origIndex && reorderCallback)
+                reorderCallback(m_listIndex, origIndex);
+            if (action == Qt::MoveAction)
+                flashDrop();
+        }
+    }
+
+    QPointF m_pressPos;
+    bool m_dragging = false;
+    bool m_flash = false;
+};
+
+class LibraryListContainer : public QWidget
+{
+public:
+    explicit LibraryListContainer(QWidget *parent = nullptr) : QWidget(parent)
+    {
+        setAcceptDrops(true);
+        m_autoScrollTimer = new QTimer(this);
+        m_autoScrollTimer->setInterval(40);
+        connect(m_autoScrollTimer, &QTimer::timeout, this, &LibraryListContainer::autoScroll);
+    }
+
+    std::function<void(int, int)> reorderCallback;
+
+protected:
+    void dragEnterEvent(QDragEnterEvent *event) override
+    {
+        if (event->mimeData()->hasFormat(QLatin1String(kLibraryDragMime)))
+            event->acceptProposedAction();
+    }
+
+    void dragMoveEvent(QDragMoveEvent *event) override
+    {
+        if (!event->mimeData()->hasFormat(QLatin1String(kLibraryDragMime)))
+            return;
+        auto *card = dynamic_cast<DraggableLibraryCard *>(event->source());
+        if (!card)
+            return;
+        int target = cardUnder(event->position().toPoint());
+        if (target >= 0 && target != card->m_listIndex && reorderCallback)
+            reorderCallback(card->m_listIndex, target);
+
+        m_lastPos = event->position().toPoint();
+        updateAutoScroll();
+    }
+
+    void dragLeaveEvent(QDragLeaveEvent *event) override
+    {
+        m_autoScrollTimer->stop();
+        QWidget::dragLeaveEvent(event);
+    }
+
+    void dropEvent(QDropEvent *event) override
+    {
+        m_autoScrollTimer->stop();
+        event->acceptProposedAction();
+    }
+
+private:
+    void updateAutoScroll()
+    {
+        auto *sa = qobject_cast<QScrollArea *>(parentWidget() ? parentWidget()->parentWidget() : nullptr);
+        auto *vbar = sa ? sa->verticalScrollBar() : nullptr;
+        if (!sa || !vbar) {
+            m_autoScrollTimer->stop();
+            return;
+        }
+        const QPoint vp = mapTo(sa->viewport(), m_lastPos);
+        const int edge = 40;
+        if (vp.y() <= edge) {
+            m_scrollDir = -1;
+            m_autoScrollTimer->start();
+        } else if (vp.y() >= sa->viewport()->height() - edge) {
+            m_scrollDir = 1;
+            m_autoScrollTimer->start();
+        } else {
+            m_autoScrollTimer->stop();
+        }
+    }
+
+    void autoScroll()
+    {
+        auto *sa = qobject_cast<QScrollArea *>(parentWidget() ? parentWidget()->parentWidget() : nullptr);
+        auto *vbar = sa ? sa->verticalScrollBar() : nullptr;
+        if (!sa || !vbar) {
+            m_autoScrollTimer->stop();
+            return;
+        }
+        updateAutoScroll();
+        if (m_autoScrollTimer->isActive())
+            vbar->setValue(vbar->value() + m_scrollDir * 20);
+    }
+
+    int cardUnder(const QPoint &pos)
+    {
+        QWidget *w = childAt(pos);
+        while (w)
+        {
+            if (auto *card = dynamic_cast<DraggableLibraryCard *>(w))
+                return card->m_listIndex;
+            w = w->parentWidget();
+        }
+        return -1;
+    }
+
+    QTimer *m_autoScrollTimer = nullptr;
+    QPoint m_lastPos;
+    int m_scrollDir = 0;
+};
+
 LibrarySettingsPage::LibrarySettingsPage(ConfigManager *config, QWidget *parent)
     : QWidget(parent), m_config(config)
 {
@@ -75,7 +271,9 @@ LibrarySettingsPage::LibrarySettingsPage(ConfigManager *config, QWidget *parent)
     auto *scrollArea = new QScrollArea;
     scrollArea->setWidgetResizable(true);
 
-    auto *content = new QWidget;
+    auto *content = new LibraryListContainer;
+    content->reorderCallback = [this](int a, int b)
+    { swapLibraries(a, b); };
     auto *contentLayout = new QVBoxLayout(content);
     m_listLayout = new QVBoxLayout;
     contentLayout->addLayout(m_listLayout);
@@ -103,14 +301,44 @@ void LibrarySettingsPage::rebuildList() {
         delete item;
     }
 
-    auto libs = m_config->getLibraries(); // use original for dir names
+    auto libs = m_config->getLibraries();
     for (int i = 0; i < m_libs.size(); ++i) {
-        QString dirName = i < libs.size() ? QFileInfo(libs[i].path).fileName()
-                                          : QString("Library %1").arg(i + 1);
-        LibraryConfig libCfg = i < libs.size() ? libs[i] : LibraryConfig();
+        // match config entry by path so unsaved reorders survive rebuilds
+        LibraryConfig libCfg;
+        QString path = m_libs[i].pathEdit ? m_libs[i].pathEdit->text() : QString();
+        if (!path.isEmpty())
+        {
+            for (const auto &lib : libs)
+            {
+                if (lib.path == path)
+                {
+                    libCfg = lib;
+                    break;
+                }
+            }
+        }
+        if (libCfg.path.isEmpty() && i < libs.size())
+            libCfg = libs[i]; // first build: align with config order
 
-        auto *card = new QGroupBox;
+        auto *card = new DraggableLibraryCard;
+        card->m_listIndex = i;
+        card->reorderCallback = [this](int a, int b)
+        { swapLibraries(a, b); };
         auto *cardLayout = new QVBoxLayout(card);
+
+        // drag handle
+        auto *handle = new QLabel(":::");
+        handle->setAlignment(Qt::AlignCenter);
+        handle->setFixedHeight(18);
+        handle->setCursor(Qt::SizeAllCursor);
+        handle->setToolTip("Drag to reorder");
+        handle->setStyleSheet("QLabel { color: #999999; }");
+        handle->installEventFilter(card);
+        auto *handleRow = new QHBoxLayout;
+        handleRow->addStretch();
+        handleRow->addWidget(handle);
+        handleRow->addStretch();
+        cardLayout->addLayout(handleRow);
 
         // Row 1: path + browse
         auto *pathRow = new QHBoxLayout;
@@ -128,14 +356,16 @@ void LibrarySettingsPage::rebuildList() {
         hotkeyBtn->setConflictChecker([this, idx](const QString &hk) {
             if (hk.isEmpty()) return false;
             for (int j = 0; j < m_libs.size(); ++j) {
-                if (j == idx || !m_libs[j].hotkeyBtn) continue;
+                if (j == idx || !m_libs[j].hotkeyBtn || !m_libs[j].enabledCheck ||
+                    !m_libs[j].enabledCheck->isChecked())
+                    continue;
                 if (ShortcutCompare::compareShortcutKeys(hk, m_libs[j].hotkeyBtn->hotkey()))
                     return true;
             }
             return false;
         });
         hotkeyBtn->setHotkey(libCfg.hotkey);
-        auto *enabledCheck = new QCheckBox("Enabled");
+        auto *enabledCheck = new QCheckBox("Enable Hotkey");
         enabledCheck->setChecked(libCfg.enabled);
         auto *delBtn = new QPushButton("Delete");
         hkRow->addWidget(new QLabel("Hotkey:"));
@@ -298,6 +528,7 @@ void LibrarySettingsPage::rebuildList() {
         w.animatePreview = ovAnimPrev;
         w.showFileTypeTag = ovTag;
         w.overrideWidget = overrideWidget;
+        w.libId = libCfg.id;
         m_libs[i] = w;
 
         cardLayout->addLayout(pathRow);
@@ -306,6 +537,7 @@ void LibrarySettingsPage::rebuildList() {
         cardLayout->addWidget(overrideWidget);
 
         connect(hotkeyBtn, &HotkeyCaptureButton::hotkeyChanged, this, &LibrarySettingsPage::validateAllHotkeys);
+        connect(enabledCheck, &QCheckBox::toggled, this, &LibrarySettingsPage::validateAllHotkeys);
         connect(browseBtn, &QPushButton::clicked, this, [this, idx]() { browseLibrary(idx); });
         connect(delBtn, &QPushButton::clicked, this, [this, idx]() { removeLibrary(idx); });
         connect(overrideToggle, &QPushButton::toggled, this, [this, idx](bool checked) {
@@ -317,7 +549,34 @@ void LibrarySettingsPage::rebuildList() {
 
         m_listLayout->addWidget(card);
     }
+    syncCardIndices();
     validateAllHotkeys();
+}
+
+void LibrarySettingsPage::swapLibraries(int a, int b)
+{
+    if (a < 0 || b < 0 || a >= m_libs.size() || b >= m_libs.size() || a == b)
+        return;
+
+    QLayoutItem *item = m_listLayout->takeAt(a);
+    m_listLayout->insertItem(b, item);
+    m_libs.swapItemsAt(a, b);
+
+    // id is the order marker: renumber 0..n-1 in the new visual order
+    for (int i = 0; i < m_libs.size(); ++i)
+        m_libs[i].libId = i;
+
+    syncCardIndices();
+    validateAllHotkeys();
+}
+
+void LibrarySettingsPage::syncCardIndices()
+{
+    for (int i = 0; i < m_listLayout->count(); ++i)
+    {
+        if (auto *card = dynamic_cast<DraggableLibraryCard *>(m_listLayout->itemAt(i)->widget()))
+            card->m_listIndex = i;
+    }
 }
 
 void LibrarySettingsPage::addLibrary() {
@@ -344,11 +603,20 @@ void LibrarySettingsPage::addLibrary() {
 
 void LibrarySettingsPage::removeLibrary(int index) {
     if (index < 0 || index >= m_libs.size()) return;
+    QString path = m_libs[index].pathEdit ? m_libs[index].pathEdit->text() : QString();
     auto libs = m_config->getLibraries();
-    if (index < libs.size()) {
-        libs.remove(index);
-        m_config->setLibraries(libs);
+    if (!path.isEmpty())
+    {
+        for (int i = 0; i < libs.size(); ++i)
+        {
+            if (libs[i].path == path)
+            {
+                libs.remove(i);
+                break;
+            }
+        }
     }
+    m_config->setLibraries(libs);
     m_libs.remove(index);
     rebuildList();
 }
@@ -368,6 +636,7 @@ LibraryConfig LibrarySettingsPage::collectOne(int index) const {
 
     const auto &w = m_libs[index];
     LibraryConfig lib;
+    lib.id = w.libId;
     lib.path = w.pathEdit->text();
     lib.hotkey = w.hotkeyBtn->hotkey();
     lib.enabled = w.enabledCheck->isChecked();
@@ -413,11 +682,13 @@ LibraryConfig LibrarySettingsPage::collectOne(int index) const {
 void LibrarySettingsPage::validateAllHotkeys() {
     for (int i = 0; i < m_libs.size(); ++i) {
         bool conflict = false;
-        if (m_libs[i].hotkeyBtn) {
+        if (m_libs[i].hotkeyBtn && m_libs[i].enabledCheck && m_libs[i].enabledCheck->isChecked()) {
             const QString hk = m_libs[i].hotkeyBtn->hotkey();
             if (!hk.isEmpty()) {
                 for (int j = 0; j < m_libs.size(); ++j) {
-                    if (i == j || !m_libs[j].hotkeyBtn) continue;
+                    if (i == j || !m_libs[j].hotkeyBtn || !m_libs[j].enabledCheck ||
+                        !m_libs[j].enabledCheck->isChecked())
+                        continue;
                     if (ShortcutCompare::compareShortcutKeys(hk, m_libs[j].hotkeyBtn->hotkey())) {
                         conflict = true;
                         break;
@@ -437,9 +708,9 @@ bool LibrarySettingsPage::collectToConfig() {
         libs.append(collectOne(i));
 
     for (int i = 0; i < libs.size(); ++i) {
-        if (libs[i].hotkey.isEmpty()) continue;
+        if (libs[i].hotkey.isEmpty() || !libs[i].enabled) continue;
         for (int j = i + 1; j < libs.size(); ++j) {
-            if (libs[j].hotkey.isEmpty()) continue;
+            if (libs[j].hotkey.isEmpty() || !libs[j].enabled) continue;
             if (ShortcutCompare::compareShortcutKeys(libs[i].hotkey, libs[j].hotkey)) {
                 QMessageBox::warning(this, "Duplicate Hotkey",
                     QString("Libraries \"%1\" and \"%2\" share the same hotkey: %3\n"

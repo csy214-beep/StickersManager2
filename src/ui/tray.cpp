@@ -76,7 +76,7 @@ void TrayIcon::updateShowMenu(const QVector<LibraryConfig> &libraries)
     for (int i = 0; i < libraries.size(); ++i)
     {
         const LibraryConfig &lib = libraries[i];
-        if (!lib.enabled)
+        if (lib.path.isEmpty())
             continue;
 
         QFileInfo dirInfo(lib.path);
