@@ -30,18 +30,12 @@ jobs:
       - name: Configure
         shell: pwsh
         run: |
-          $qtRoot = Split-Path $env:Qt6_DIR
-          $mingwBin = Get-ChildItem "$qtRoot\Tools" -Directory -Filter "mingw*" | Select-Object -First 1
-          if (-not $mingwBin) { throw "MinGW toolchain not found under $qtRoot\Tools" }
-          $env:Path = "$env:Qt6_DIR\bin;$($mingwBin.FullName)\bin;" + $env:Path
-          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DQT_PATH="$env:Qt6_DIR"
+          $env:Path = "$env:QT_ROOT_DIR\bin;" + $env:Path
+          cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DQT_PATH="$env:QT_ROOT_DIR"
       - name: Build
         shell: pwsh
         run: |
-          $qtRoot = Split-Path $env:Qt6_DIR
-          $mingwBin = Get-ChildItem "$qtRoot\Tools" -Directory -Filter "mingw*" | Select-Object -First 1
-          if (-not $mingwBin) { throw "MinGW toolchain not found under $qtRoot\Tools" }
-          $env:Path = "$env:Qt6_DIR\bin;$($mingwBin.FullName)\bin;" + $env:Path
+          $env:Path = "$env:QT_ROOT_DIR\bin;" + $env:Path
           cmake --build build --parallel
       - name: Assemble Release directory
         shell: pwsh
