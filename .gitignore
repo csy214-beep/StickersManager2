@@ -6,6 +6,7 @@ cmake-build-release/
 StickersManager
 
 release/
+release_notes.md
 *.exe
 
 *.7z

@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.5)
 project(StickersManager)
 # ------------------
-# 设置是否为debug模式
-set(D_OR_R OFF)#ON for Debug, OFF for Release
-
 # 是否开启控制台调试输出
 set(CONSOLE OFF)
 # ------------------
@@ -13,12 +10,17 @@ if (WIN32)
     add_compile_definitions(UNICODE _UNICODE)
 endif ()
 
-set(CMAKE_PREFIX_PATH "D:/Qt/6.10.1/mingw_64")
+set(QT_PATH "D:/Qt/6.10.1/mingw_64" CACHE PATH "Qt installation root (override for CI: -DQT_PATH=<Qt6_DIR>)")
+set(CMAKE_PREFIX_PATH ${QT_PATH})
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
+# UTF-8 源码（MSVC 默认按 ANSI 解释，中文注释/字符串会告警或乱码）
+if (MSVC)
+    add_compile_options(/utf-8)
+endif ()
 # 设置第三方库路径
 set(THIRDPARTY_DIR ${CMAKE_SOURCE_DIR}/thirdparty)
 

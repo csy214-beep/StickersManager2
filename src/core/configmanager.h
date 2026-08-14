@@ -36,7 +36,6 @@ public:
     ~ConfigManager();
 
     bool loadConfig();
-    bool reloadFromDisk();
     bool saveConfig();
 
     QVector<LibraryConfig> getLibraries() const;
@@ -64,9 +63,14 @@ public:
     int getCategoryButtonSize() const;
     int getGridCellSize() const;
     int getGridColumns() const;
+    int getRecentLimit() const;
     bool animateThumbnails() const;
     bool animatePreview() const;
     bool showFileTypeTag() const;
+    bool showStickerName() const;
+    bool showStickerSize() const;
+    bool showCategoryName() const;
+    bool showCategoryCount() const;
     bool copyOnDoubleClick() const;
     bool highlightOnClick() const;
     bool getDefaultAlwaysOnTop() const;
@@ -83,10 +87,15 @@ public:
     int getEffectiveCategoryButtonSize(const LibraryConfig &lib) const;
     int getEffectiveGridCellSize(const LibraryConfig &lib) const;
     int getEffectiveGridColumns(const LibraryConfig &lib) const;
+    int getEffectiveRecentLimit(const LibraryConfig &lib) const;
     int getEffectiveThumbnailCacheSize(const LibraryConfig &lib) const;
     bool getEffectiveAnimateThumbnails(const LibraryConfig &lib) const;
     bool getEffectiveAnimatePreview(const LibraryConfig &lib) const;
     bool getEffectiveShowFileTypeTag(const LibraryConfig &lib) const;
+    bool getEffectiveShowStickerName(const LibraryConfig &lib) const;
+    bool getEffectiveShowStickerSize(const LibraryConfig &lib) const;
+    bool getEffectiveShowCategoryName(const LibraryConfig &lib) const;
+    bool getEffectiveShowCategoryCount(const LibraryConfig &lib) const;
     bool getEffectiveHighlightOnClick(const LibraryConfig &lib) const;
     bool getEffectiveCopyOnDoubleClick(const LibraryConfig &lib) const;
     bool getEffectiveAlwaysOnTop(const LibraryConfig &lib) const;

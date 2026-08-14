@@ -42,8 +42,6 @@
 #include "fsutil.hpp"
 
 static const QStringList BOOL_ITEMS = {"General", "On", "Off"};
-static const QStringList BOOL_KEYS = {"copyOnDoubleClick", "highlightOnClick",
-                                      "animateThumbnails", "animatePreview", "showFileTypeTag"};
 
 static QSpinBox *makeSpinBox(int min, int max, int val, QWidget *parent) {
     auto *sb = new QSpinBox(parent);
@@ -70,12 +68,6 @@ static QComboBox *makeBoolCombo(const QString &current, QWidget *parent) {
 }
 
 static QString boolToCombo(bool val) { return val ? "On" : "Off"; }
-
-static int comboToBool(const QString &s, bool def) {
-    if (s == "On") return 1;
-    if (s == "Off") return 0;
-    return def ? -1 : -1; // -1 means "use default"
-}
 
 static QStringList computeLibraryStats(const QString &libPath)
 {
@@ -494,8 +486,10 @@ void LibrarySettingsPage::rebuildList() {
         auto *uiOvForm = new QFormLayout(uiOv);
         auto *ovGridCellSize = makeSpinBox(0, 400, libCfg.settings["ui"].toObject()["gridCellSize"].toInt(0), this);
         auto *ovCategoryBtnSize = makeSpinBox(0, 300, libCfg.settings["ui"].toObject()["categoryButtonSize"].toInt(0), this);
+        auto *ovRecentLimit = makeSpinBox(0, 1000, libCfg.settings["ui"].toObject()["recentLimit"].toInt(0), this);
         uiOvForm->addRow("Grid Cell Size:", ovGridCellSize);
         uiOvForm->addRow("Category Button Size:", ovCategoryBtnSize);
+        uiOvForm->addRow("Recent Limit:", ovRecentLimit);
         ovLayout->addWidget(uiOv);
 
         // -- Behavior overrides --
@@ -538,17 +532,38 @@ void LibrarySettingsPage::rebuildList() {
             libCfg.settings["behavior"].toObject().contains("showFileTypeTag")
                 ? boolToCombo(libCfg.settings["behavior"].toObject()["showFileTypeTag"].toBool())
                 : "General", this);
+        auto *ovStickerName = makeBoolCombo(
+            libCfg.settings["behavior"].toObject().contains("showStickerName")
+                ? boolToCombo(libCfg.settings["behavior"].toObject()["showStickerName"].toBool())
+                : "General", this);
+        auto *ovStickerSize = makeBoolCombo(
+            libCfg.settings["behavior"].toObject().contains("showStickerSize")
+                ? boolToCombo(libCfg.settings["behavior"].toObject()["showStickerSize"].toBool())
+                : "General", this);
+        auto *ovCategoryName = makeBoolCombo(
+            libCfg.settings["behavior"].toObject().contains("showCategoryName")
+                ? boolToCombo(libCfg.settings["behavior"].toObject()["showCategoryName"].toBool())
+                : "General", this);
+        auto *ovCategoryCount = makeBoolCombo(
+            libCfg.settings["behavior"].toObject().contains("showCategoryCount")
+                ? boolToCombo(libCfg.settings["behavior"].toObject()["showCategoryCount"].toBool())
+                : "General", this);
         bhvOvForm->addRow("Copy on Double-Click:", ovCopyDbl);
         bhvOvForm->addRow("Highlight on Click:", ovHighlight);
         bhvOvForm->addRow("Animate Thumbnails:", animThumbRow);
         bhvOvForm->addRow("Animate Preview:", ovAnimPrev);
         bhvOvForm->addRow("Show File Type Tag:", ovTag);
+        bhvOvForm->addRow("Show Sticker Name:", ovStickerName);
+        bhvOvForm->addRow("Show Sticker Size:", ovStickerSize);
+        bhvOvForm->addRow("Show Category Name:", ovCategoryName);
+        bhvOvForm->addRow("Show Category Count:", ovCategoryCount);
         ovLayout->addWidget(bhvOv);
 
         auto *resetBtn = new QPushButton("Reset", this);
         connect(resetBtn, &QPushButton::clicked, this, [this, useCustomGeometry, winPosX, winPosY, winW, winH,
-                                                        alwaysOnTop, ovGridCellSize, ovCategoryBtnSize,
-                                                        ovCopyDbl, ovHighlight, ovAnimThumb, ovAnimPrev, ovTag]() {
+                                                        alwaysOnTop, ovGridCellSize, ovCategoryBtnSize, ovRecentLimit,
+                                                        ovCopyDbl, ovHighlight, ovAnimThumb, ovAnimPrev, ovTag,
+                                                        ovStickerName, ovStickerSize, ovCategoryName, ovCategoryCount]() {
             useCustomGeometry->setChecked(false);
             QPoint defPos = m_config->getWindowPosition();
             QSize defSize = m_config->getWindowSize();
@@ -559,7 +574,9 @@ void LibrarySettingsPage::rebuildList() {
             alwaysOnTop->setCurrentIndex(0);
             ovGridCellSize->setValue(0);
             ovCategoryBtnSize->setValue(0);
-            for (QComboBox *cb : {ovCopyDbl, ovHighlight, ovAnimThumb, ovAnimPrev, ovTag})
+            ovRecentLimit->setValue(0);
+            for (QComboBox *cb : {ovCopyDbl, ovHighlight, ovAnimThumb, ovAnimPrev, ovTag,
+                                  ovStickerName, ovStickerSize, ovCategoryName, ovCategoryCount})
                 cb->setCurrentIndex(0);
         });
         ovLayout->addWidget(resetBtn);
@@ -576,11 +593,16 @@ void LibrarySettingsPage::rebuildList() {
         w.alwaysOnTop = alwaysOnTop;
         w.gridCellSize = ovGridCellSize;
         w.categoryButtonSize = ovCategoryBtnSize;
+        w.recentLimit = ovRecentLimit;
         w.copyOnDblClick = ovCopyDbl;
         w.highlightOnClick = ovHighlight;
         w.animateThumbnails = ovAnimThumb;
         w.animatePreview = ovAnimPrev;
         w.showFileTypeTag = ovTag;
+        w.showStickerName = ovStickerName;
+        w.showStickerSize = ovStickerSize;
+        w.showCategoryName = ovCategoryName;
+        w.showCategoryCount = ovCategoryCount;
         w.overrideWidget = overrideWidget;
         w.libId = libCfg.id;
         m_libs[i] = w;
@@ -783,6 +805,7 @@ LibraryConfig LibrarySettingsPage::collectOne(int index) const {
     QJsonObject ui;
     if (w.gridCellSize->value() != 0) ui["gridCellSize"] = w.gridCellSize->value();
     if (w.categoryButtonSize->value() != 0) ui["categoryButtonSize"] = w.categoryButtonSize->value();
+    if (w.recentLimit->value() != 0) ui["recentLimit"] = w.recentLimit->value();
     if (!ui.isEmpty()) settings["ui"] = ui;
 
     // Behavior
@@ -796,6 +819,10 @@ LibraryConfig LibrarySettingsPage::collectOne(int index) const {
     setBool(w.animateThumbnails, "animateThumbnails");
     setBool(w.animatePreview, "animatePreview");
     setBool(w.showFileTypeTag, "showFileTypeTag");
+    setBool(w.showStickerName, "showStickerName");
+    setBool(w.showStickerSize, "showStickerSize");
+    setBool(w.showCategoryName, "showCategoryName");
+    setBool(w.showCategoryCount, "showCategoryCount");
     if (!bhv.isEmpty()) settings["behavior"] = bhv;
 
     lib.settings = settings;

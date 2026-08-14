@@ -38,8 +38,10 @@ GeneralSettingsPage::GeneralSettingsPage(ConfigManager *config, QWidget *parent)
     auto *uiForm = new QFormLayout(uiGroup);
     m_categoryButtonSize = makeSpinBox(30, 300, config->getCategoryButtonSize(), this);
     m_gridCellSize = makeSpinBox(40, 400, config->getGridCellSize(), this);
+    m_recentLimit = makeSpinBox(1, 1000, config->getRecentLimit(), this);
     uiForm->addRow("Category Button Size:", m_categoryButtonSize);
     uiForm->addRow("Grid Cell Size:", m_gridCellSize);
+    uiForm->addRow("Recent Limit:", m_recentLimit);
     contentLayout->addWidget(uiGroup);
 
     // --- Behavior ---
@@ -73,11 +75,23 @@ GeneralSettingsPage::GeneralSettingsPage(ConfigManager *config, QWidget *parent)
     m_animatePreview->setChecked(config->animatePreview());
     m_showFileTypeTag = new QCheckBox(this);
     m_showFileTypeTag->setChecked(config->showFileTypeTag());
+    m_showStickerName = new QCheckBox(this);
+    m_showStickerName->setChecked(config->showStickerName());
+    m_showStickerSize = new QCheckBox(this);
+    m_showStickerSize->setChecked(config->showStickerSize());
+    m_showCategoryName = new QCheckBox(this);
+    m_showCategoryName->setChecked(config->showCategoryName());
+    m_showCategoryCount = new QCheckBox(this);
+    m_showCategoryCount->setChecked(config->showCategoryCount());
     bhvForm->addRow("Copy on Double-Click:", m_copyOnDblClick);
     bhvForm->addRow("Highlight on Click:", m_highlightOnClick);
     bhvForm->addRow("Animate Thumbnails:", animThumbRow);
     bhvForm->addRow("Animate Preview:", m_animatePreview);
     bhvForm->addRow("Show File Type Tag:", m_showFileTypeTag);
+    bhvForm->addRow("Show Sticker Name:", m_showStickerName);
+    bhvForm->addRow("Show Sticker Size:", m_showStickerSize);
+    bhvForm->addRow("Show Category Name:", m_showCategoryName);
+    bhvForm->addRow("Show Category Count:", m_showCategoryCount);
     contentLayout->addWidget(bhvGroup);
 
     // --- Window ---
@@ -116,6 +130,7 @@ void GeneralSettingsPage::applyToConfig() {
     QJsonObject ui = def["ui"].toObject();
     ui["categoryButtonSize"] = m_categoryButtonSize->value();
     ui["gridCellSize"] = m_gridCellSize->value();
+    ui["recentLimit"] = m_recentLimit->value();
     def["ui"] = ui;
 
     QJsonObject bhv = def["behavior"].toObject();
@@ -124,6 +139,10 @@ void GeneralSettingsPage::applyToConfig() {
     bhv["animateThumbnails"] = m_animateThumbnails->isChecked();
     bhv["animatePreview"] = m_animatePreview->isChecked();
     bhv["showFileTypeTag"] = m_showFileTypeTag->isChecked();
+    bhv["showStickerName"] = m_showStickerName->isChecked();
+    bhv["showStickerSize"] = m_showStickerSize->isChecked();
+    bhv["showCategoryName"] = m_showCategoryName->isChecked();
+    bhv["showCategoryCount"] = m_showCategoryCount->isChecked();
     def["behavior"] = bhv;
 
     QJsonObject win = def["window"].toObject();
@@ -144,6 +163,7 @@ void GeneralSettingsPage::resetToDefaults() {
     QJsonObject ui = def["ui"].toObject();
     m_categoryButtonSize->setValue(ui["categoryButtonSize"].toInt(90));
     m_gridCellSize->setValue(ui["gridCellSize"].toInt(120));
+    m_recentLimit->setValue(ui["recentLimit"].toInt(100));
 
     QJsonObject bhv = def["behavior"].toObject();
     m_copyOnDblClick->setChecked(bhv["copyOnDoubleClick"].toBool(true));
@@ -151,6 +171,10 @@ void GeneralSettingsPage::resetToDefaults() {
     m_animateThumbnails->setChecked(bhv["animateThumbnails"].toBool(false));
     m_animatePreview->setChecked(bhv["animatePreview"].toBool(true));
     m_showFileTypeTag->setChecked(bhv["showFileTypeTag"].toBool(true));
+    m_showStickerName->setChecked(bhv["showStickerName"].toBool(true));
+    m_showStickerSize->setChecked(bhv["showStickerSize"].toBool(true));
+    m_showCategoryName->setChecked(bhv["showCategoryName"].toBool(true));
+    m_showCategoryCount->setChecked(bhv["showCategoryCount"].toBool(true));
 
     QJsonObject win = def["window"].toObject();
     QJsonArray pos = win["position"].toArray();

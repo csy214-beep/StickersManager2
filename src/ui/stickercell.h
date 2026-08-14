@@ -29,6 +29,8 @@ public:
     void setAnimateEnabled(bool enabled);
     void setInViewport(bool visible);
     void setShowTag(bool show);
+    void setShowFileName(bool show);
+    void setShowFileSize(bool show);
     void setHighlightEnabled(bool enabled) { m_highlightEnabled = enabled; }
     void setCopyOnDoubleClick(bool enabled) { m_copyOnDblClick = enabled; }
 
@@ -53,6 +55,8 @@ private:
     QString m_filePath;
     QLabel *m_imageLabel;
     QLabel *m_tagLabel;
+    QLabel *m_fileNameLabel;
+    QLabel *m_sizeLabel;
     bool m_isHighlighted;
     int m_cellSize;
     QPixmap m_currentPixmap; // 保存当前图片
@@ -60,6 +64,8 @@ private:
     bool m_animateEnabled = false;
     bool m_inViewport = true;
     bool m_showTag = true;
+    bool m_showFileName = true;
+    bool m_showFileSize = true;
     bool m_highlightEnabled = true;
     bool m_copyOnDblClick = true;
     QMovie *m_movie = nullptr;

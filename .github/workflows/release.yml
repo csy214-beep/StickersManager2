@@ -1,0 +1,87 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.10.1'
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_msvc2022_64'
+          cache: 'true'
+      - name: Configure
+        shell: pwsh
+        run: cmake -S . -B build -DQT_PATH="$env:Qt6_DIR"
+      - name: Build
+        shell: pwsh
+        run: cmake --build build --config Release --parallel
+      - name: Upload build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: build/Release
+          retention-days: 1
+
+  release:
+    needs: build
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Download build output
+        uses: actions/download-artifact@v4
+        with:
+          name: build
+          path: release
+      - name: Add docs to payload
+        shell: pwsh
+        run: Copy-Item README.md, LICENSE release/
+      - name: Parse version from CHANGELOG
+        id: version
+        shell: pwsh
+        run: |
+          $raw = Get-Content CHANGELOG.md -Raw
+          $m = [regex]::Match($raw, '(?m)^# Changelog[^\n]*?→\s*v?([\d.]+)')
+          if (-not $m.Success) { throw "Cannot parse version from CHANGELOG.md" }
+          $v = $m.Groups[1].Value
+          "version=$v" | Out-File $env:GITHUB_OUTPUT -Append
+          "tag=v$v" | Out-File $env:GITHUB_OUTPUT -Append
+      - name: 7z portable package
+        shell: pwsh
+        run: 7z a "StickersManager_${{ steps.version.outputs.version }}.7z" ".\release\*"
+      - name: Build installer (Inno Setup)
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          $iscc = (Get-Command ISCC.exe -ErrorAction SilentlyContinue).Source
+          if (-not $iscc) {
+            $iscc = @("C:\Program Files (x86)\Inno Setup 6\ISCC.exe", "C:\Program Files\Inno Setup 6\ISCC.exe", "C:\Program Files\Inno Setup 7\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
+          }
+          if (-not $iscc) { throw "ISCC.exe not found" }
+          & $iscc /DMyAppVersion="${{ steps.version.outputs.version }}" pkg.iss
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed (exit $LASTEXITCODE)" }
+      - name: Generate release notes
+        shell: pwsh
+        run: .\scripts\make_release_notes.ps1
+      - name: Create git tag
+        shell: pwsh
+        run: |
+          git tag "${{ steps.version.outputs.tag }}"
+          git push origin "${{ steps.version.outputs.tag }}"
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ steps.version.outputs.tag }}" "StickersManager_${{ steps.version.outputs.version }}.exe" "StickersManager_${{ steps.version.outputs.version }}.7z" --title "${{ steps.version.outputs.tag }}" --notes-file release_notes.md
