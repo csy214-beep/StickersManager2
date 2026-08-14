@@ -29,6 +29,7 @@ struct LibraryEditWidgets {
     QSpinBox *gridCellSize;
     QSpinBox *categoryButtonSize;
     QSpinBox *recentLimit;
+    QComboBox *recentEnabled;
     QComboBox *animateThumbnails;
     QComboBox *animatePreview;
     QComboBox *showFileTypeTag;

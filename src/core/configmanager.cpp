@@ -203,6 +203,7 @@ QJsonObject ConfigManager::getDefaultConfig() {
     ui["gridCellSize"] = 120;
     ui["gridColumns"] = 3;
     ui["recentLimit"] = 100;
+    ui["recentEnabled"] = true;
     def["ui"] = ui;
 
     QJsonObject behavior;
@@ -254,6 +255,10 @@ int ConfigManager::getGridColumns() const {
 
 int ConfigManager::getRecentLimit() const {
     return defaultBlock()["ui"].toObject()["recentLimit"].toInt(100);
+}
+
+bool ConfigManager::recentEnabled() const {
+    return defaultBlock()["ui"].toObject()["recentEnabled"].toBool(true);
 }
 
 int ConfigManager::getThumbnailCacheSize() const {
@@ -350,6 +355,12 @@ int ConfigManager::getEffectiveRecentLimit(const LibraryConfig &lib) const {
     QJsonObject o = libCatSettings(lib, "ui");
     if (o.contains("recentLimit")) return o["recentLimit"].toInt();
     return getRecentLimit();
+}
+
+bool ConfigManager::getEffectiveRecentEnabled(const LibraryConfig &lib) const {
+    QJsonObject o = libCatSettings(lib, "ui");
+    if (o.contains("recentEnabled")) return o["recentEnabled"].toBool();
+    return recentEnabled();
 }
 
 int ConfigManager::getEffectiveThumbnailCacheSize(const LibraryConfig &) const {

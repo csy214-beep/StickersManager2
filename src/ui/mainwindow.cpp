@@ -204,8 +204,9 @@ void MainWindow::populateCategories()
     };
 
     // Recent pseudo-category first — hidden entirely when there are no usage records
+    // or when the Recent feature is disabled (default or per-library override)
     QVector<QString> recentPaths = m_recents.paths();
-    if (!recentPaths.isEmpty()) {
+    if (m_config->getEffectiveRecentEnabled(m_libConfig) && !recentPaths.isEmpty()) {
         addCategoryButton(kRecentCategoryName, QString(), recentPaths.size(), true);
     }
 
@@ -216,13 +217,15 @@ void MainWindow::populateCategories()
     }
     m_categoryLayout->addStretch();
 
-    if (!recentPaths.isEmpty())
+    if (m_config->getEffectiveRecentEnabled(m_libConfig) && !recentPaths.isEmpty())
         showCategory(kRecentCategoryName);
     else if (!categories.isEmpty())
         showCategory(categories.keys().first());
 }
 
 void MainWindow::showCategory(const QString &categoryName) {
+    if (categoryName == kRecentCategoryName && !m_config->getEffectiveRecentEnabled(m_libConfig))
+        return;
     m_currentCategory = categoryName;
     m_searchInput->clear();
     m_categorySearchInput->clear();
@@ -489,12 +492,14 @@ void MainWindow::onStickerRightClicked(const QString &filePath)
 }
 
 void MainWindow::onStickerDoubleClicked(const QString &filePath) {
-    m_recents.recordUse(filePath);
-    if (!refreshRecentButton()) {
-        // 首次使用：Recent 按钮还不存在，重建类目面板（会创建 Recent 并切为当前视图）
-        populateCategories();
-    } else if (m_currentCategory == kRecentCategoryName) {
-        displayStickers(m_recents.paths());
+    if (m_config->getEffectiveRecentEnabled(m_libConfig)) {
+        m_recents.recordUse(filePath);
+        if (!refreshRecentButton()) {
+            // 首次使用：Recent 按钮还不存在，重建类目面板（会创建 Recent 并切为当前视图）
+            populateCategories();
+        } else if (m_currentCategory == kRecentCategoryName) {
+            displayStickers(m_recents.paths());
+        }
     }
     hide();
 }

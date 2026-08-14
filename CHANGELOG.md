@@ -1,3 +1,13 @@
+# Changelog — v2.6.0 → v2.7.0
+
+### Added
+
+- New setting **Enable Recent Usage** (`default.ui.recentEnabled`, default on, General tab checkbox + per-library General/On/Off override): when off, the Recent category is hidden (even with existing records) and usage recording stops; records are kept so re-enabling restores the category
+
+### Changed
+
+- Debug console is now a single CMake option `CONSOLE` (plain variable in `CMakeLists.txt:5`, source = switch, default OFF): enables the console window (`WIN32_EXECUTABLE FALSE`), live qDebug output (`DEBUG_MODE` follows `CONSOLE`), and the `LOG_TO_CONSOLE` macro; subsystem selection is no longer duplicated in `add_executable` and target properties
+
 # Changelog — v2.5.0 → v2.6.0
 
 ### Added

@@ -487,9 +487,14 @@ void LibrarySettingsPage::rebuildList() {
         auto *ovGridCellSize = makeSpinBox(0, 400, libCfg.settings["ui"].toObject()["gridCellSize"].toInt(0), this);
         auto *ovCategoryBtnSize = makeSpinBox(0, 300, libCfg.settings["ui"].toObject()["categoryButtonSize"].toInt(0), this);
         auto *ovRecentLimit = makeSpinBox(0, 1000, libCfg.settings["ui"].toObject()["recentLimit"].toInt(0), this);
+        auto *ovRecentEnabled = makeBoolCombo(
+            libCfg.settings["ui"].toObject().contains("recentEnabled")
+                ? boolToCombo(libCfg.settings["ui"].toObject()["recentEnabled"].toBool())
+                : "General", this);
         uiOvForm->addRow("Grid Cell Size:", ovGridCellSize);
         uiOvForm->addRow("Category Button Size:", ovCategoryBtnSize);
         uiOvForm->addRow("Recent Limit:", ovRecentLimit);
+        uiOvForm->addRow("Enable Recent Usage:", ovRecentEnabled);
         ovLayout->addWidget(uiOv);
 
         // -- Behavior overrides --
@@ -562,7 +567,7 @@ void LibrarySettingsPage::rebuildList() {
         auto *resetBtn = new QPushButton("Reset", this);
         connect(resetBtn, &QPushButton::clicked, this, [this, useCustomGeometry, winPosX, winPosY, winW, winH,
                                                         alwaysOnTop, ovGridCellSize, ovCategoryBtnSize, ovRecentLimit,
-                                                        ovCopyDbl, ovHighlight, ovAnimThumb, ovAnimPrev, ovTag,
+                                                        ovRecentEnabled, ovCopyDbl, ovHighlight, ovAnimThumb, ovAnimPrev, ovTag,
                                                         ovStickerName, ovStickerSize, ovCategoryName, ovCategoryCount]() {
             useCustomGeometry->setChecked(false);
             QPoint defPos = m_config->getWindowPosition();
@@ -575,6 +580,7 @@ void LibrarySettingsPage::rebuildList() {
             ovGridCellSize->setValue(0);
             ovCategoryBtnSize->setValue(0);
             ovRecentLimit->setValue(0);
+            ovRecentEnabled->setCurrentIndex(0);
             for (QComboBox *cb : {ovCopyDbl, ovHighlight, ovAnimThumb, ovAnimPrev, ovTag,
                                   ovStickerName, ovStickerSize, ovCategoryName, ovCategoryCount})
                 cb->setCurrentIndex(0);
@@ -594,6 +600,7 @@ void LibrarySettingsPage::rebuildList() {
         w.gridCellSize = ovGridCellSize;
         w.categoryButtonSize = ovCategoryBtnSize;
         w.recentLimit = ovRecentLimit;
+        w.recentEnabled = ovRecentEnabled;
         w.copyOnDblClick = ovCopyDbl;
         w.highlightOnClick = ovHighlight;
         w.animateThumbnails = ovAnimThumb;
@@ -806,6 +813,8 @@ LibraryConfig LibrarySettingsPage::collectOne(int index) const {
     if (w.gridCellSize->value() != 0) ui["gridCellSize"] = w.gridCellSize->value();
     if (w.categoryButtonSize->value() != 0) ui["categoryButtonSize"] = w.categoryButtonSize->value();
     if (w.recentLimit->value() != 0) ui["recentLimit"] = w.recentLimit->value();
+    if (w.recentEnabled->currentText() != "General")
+        ui["recentEnabled"] = (w.recentEnabled->currentText() == "On");
     if (!ui.isEmpty()) settings["ui"] = ui;
 
     // Behavior

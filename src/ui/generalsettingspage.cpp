@@ -39,9 +39,12 @@ GeneralSettingsPage::GeneralSettingsPage(ConfigManager *config, QWidget *parent)
     m_categoryButtonSize = makeSpinBox(30, 300, config->getCategoryButtonSize(), this);
     m_gridCellSize = makeSpinBox(40, 400, config->getGridCellSize(), this);
     m_recentLimit = makeSpinBox(1, 1000, config->getRecentLimit(), this);
+    m_recentEnabled = new QCheckBox(this);
+    m_recentEnabled->setChecked(config->recentEnabled());
     uiForm->addRow("Category Button Size:", m_categoryButtonSize);
     uiForm->addRow("Grid Cell Size:", m_gridCellSize);
     uiForm->addRow("Recent Limit:", m_recentLimit);
+    uiForm->addRow("Enable Recent Usage:", m_recentEnabled);
     contentLayout->addWidget(uiGroup);
 
     // --- Behavior ---
@@ -131,6 +134,7 @@ void GeneralSettingsPage::applyToConfig() {
     ui["categoryButtonSize"] = m_categoryButtonSize->value();
     ui["gridCellSize"] = m_gridCellSize->value();
     ui["recentLimit"] = m_recentLimit->value();
+    ui["recentEnabled"] = m_recentEnabled->isChecked();
     def["ui"] = ui;
 
     QJsonObject bhv = def["behavior"].toObject();
@@ -164,6 +168,7 @@ void GeneralSettingsPage::resetToDefaults() {
     m_categoryButtonSize->setValue(ui["categoryButtonSize"].toInt(90));
     m_gridCellSize->setValue(ui["gridCellSize"].toInt(120));
     m_recentLimit->setValue(ui["recentLimit"].toInt(100));
+    m_recentEnabled->setChecked(ui["recentEnabled"].toBool(true));
 
     QJsonObject bhv = def["behavior"].toObject();
     m_copyOnDblClick->setChecked(bhv["copyOnDoubleClick"].toBool(true));

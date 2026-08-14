@@ -64,6 +64,7 @@ public:
     int getGridCellSize() const;
     int getGridColumns() const;
     int getRecentLimit() const;
+    bool recentEnabled() const;
     bool animateThumbnails() const;
     bool animatePreview() const;
     bool showFileTypeTag() const;
@@ -88,6 +89,7 @@ public:
     int getEffectiveGridCellSize(const LibraryConfig &lib) const;
     int getEffectiveGridColumns(const LibraryConfig &lib) const;
     int getEffectiveRecentLimit(const LibraryConfig &lib) const;
+    bool getEffectiveRecentEnabled(const LibraryConfig &lib) const;
     int getEffectiveThumbnailCacheSize(const LibraryConfig &lib) const;
     bool getEffectiveAnimateThumbnails(const LibraryConfig &lib) const;
     bool getEffectiveAnimatePreview(const LibraryConfig &lib) const;

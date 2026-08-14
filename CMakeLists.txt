@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 3.5)
 project(StickersManager)
-# ------------------
-# 是否开启控制台调试输出
+# ====================== 全局配置开关 ======================
+# 是否开启控制台调试输出（源码即开关；ON = 控制台窗口 + qDebug 直达控制台 + LOG_TO_CONSOLE 生效）
 set(CONSOLE OFF)
-# ------------------
+if (CONSOLE)
+    add_compile_definitions(CONSOLE)
+endif ()
 
 # 启用 Unicode 模式（Windows 平台）
 if (WIN32)
@@ -49,12 +51,7 @@ set(RESOURCE_FILES
         resources.qrc
 )
 
-if (NOT CONSOLE)
-    set(CON WIN32)
-endif ()
-
 add_executable(${PROJECT_NAME}
-        ${CON}
         ${SOURCE_FILES}
         ${HEADER_FILES}
         ${HPP_FILES}
@@ -76,6 +73,13 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         ${CMAKE_CURRENT_BINARY_DIR}
         ${THIRDPARTY_DIR}/stb
 )
+# 子系统统一由 CONSOLE 变量驱动（原为 add_executable 的 WIN32 标志与图标块内的属性双写）
+if (CONSOLE)
+    set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE FALSE)
+else ()
+    set_target_properties(${PROJECT_NAME} PROPERTIES WIN32_EXECUTABLE TRUE)
+endif ()
+
 # 设置图标（Windows）
 if (WIN32)
     # 1. 定义图标文件路径和rc脚本路径
@@ -86,17 +90,6 @@ if (WIN32)
     if (EXISTS ${APP_ICON_FILE} AND EXISTS ${APP_RC_FILE})
         # 3. 将rc脚本文件加入项目编译（核心：通过rc脚本绑定图标）
         target_sources(${PROJECT_NAME} PRIVATE ${APP_RC_FILE})
-
-        # 4. 配合你的CONSOLE开关，设置是否为无控制台的GUI程序（完美联动你的原有逻辑）
-        if (NOT CONSOLE)
-            set_target_properties(${PROJECT_NAME} PROPERTIES
-                    WIN32_EXECUTABLE TRUE  # 无控制台窗口
-            )
-        else ()
-            set_target_properties(${PROJECT_NAME} PROPERTIES
-                    WIN32_EXECUTABLE FALSE # 带控制台窗口
-            )
-        endif ()
     else ()
         message(WARNING "Program icon file or RC script is missing, the default icon will be used!")
     endif ()

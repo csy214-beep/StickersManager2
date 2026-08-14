@@ -21,7 +21,11 @@
 #include "updatechecker.h"
 #include "appinfo.h"
 
+#ifdef CONSOLE
+#define DEBUG_MODE true
+#else
 #define DEBUG_MODE false
+#endif
 
 static void rebuildHotkeyMapping(const QMap<QString, MainWindow *> &windows, QMap<QString, MainWindow *> &hotkeyToWindow) {
     hotkeyToWindow.clear();

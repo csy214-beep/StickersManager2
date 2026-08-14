@@ -6,7 +6,7 @@ cd build && cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug && cmake --bu
 ```
 - Qt 6.10.1 MinGW, `QT_PATH` cache variable default `D:/Qt/6.10.1/mingw_64` (`CMakeLists.txt:13-14`), overridable via `-DQT_PATH=...` (CI: `-DQT_PATH=${{ env.Qt6_DIR }}`); `CMAKE_PREFIX_PATH` set from it, windeployqt POST_BUILD follows it
 - `CMakeLists.txt` links `Qt6::Core Gui Widgets Concurrent Network`; new source files need re-run `cmake ..` to be picked up (`FILE(GLOB_RECURSE ./src/)` for `.cpp/.h/.hpp`)
-- `CONSOLE` ON shows console (`WIN32_EXECUTABLE FALSE`), `qDebug()` visible — **currently OFF** (release). C++20, `UNICODE`/`_UNICODE` defined
+- `CONSOLE` is a **plain variable** (`CMakeLists.txt:5`, source = switch, default OFF): ON → console window (`WIN32_EXECUTABLE FALSE`) + `add_compile_definitions(CONSOLE)` (activates `LOG_TO_CONSOLE` in `log.hpp`) + `DEBUG_MODE` follows it in `main.cpp:24-28` (true = no `messageHandler`, qDebug to console); subsystem is set once via target property, no `WIN32` flag duplication. C++20, `UNICODE`/`_UNICODE` defined
 - `windeployqt` auto-deploy runs POST_BUILD on every build (`CMakeLists.txt:103-113`); C++20, `UNICODE`/`_UNICODE` defined
 
 ## CI / Release (`.github/workflows/release.yml`)
@@ -15,14 +15,14 @@ cd build && cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug && cmake --bu
 - Version single source = **top section of `CHANGELOG.md`** (`# Changelog — vA → vB`); parsed by `scripts/make_release_notes.ps1` (also generates `release_notes.md` with body + `### Packaging` + `**Full Changelog**` compare link; uses section date, else today)
 - Installer: `pkg.iss` (Inno Setup) compiled by ISCC with `/DMyAppVersion=X.Y.Z` — CI: `choco install innosetup` then locate ISCC.exe dynamically (PATH, then `Program Files (x86)/Inno Setup 6`, `Program Files/Inno Setup 6`, `Program Files/Inno Setup 7`); paths inside pkg.iss are **relative to the script dir** (LICENSE, README.md, `assets/st.ico`, `OutputDir=.`, sources from `release/`); output `StickersManager_<ver>.exe` at repo root; start-menu shortcut always created, desktop icon = unchecked Task
 - CI payload = `build/Release` + a "Add docs to payload" step copies `README.md` + `LICENSE` into `release/` (they ship in both 7z and installer); `scripts/clean_release.py` is **not needed on CI**
-- `pkg.iss` also used for the **local manual** flow (iscc with default `#define MyAppVersion "2.6.0"` — e.g. `D:\Program Files\Inno Setup 7\ISCC.exe /DMyAppVersion=2.6.0 pkg.iss`)
+- `pkg.iss` also used for the **local manual** flow (iscc with default `#define MyAppVersion "2.7.0"` — e.g. `D:\Program Files\Inno Setup 7\ISCC.exe /DMyAppVersion=2.7.0 pkg.iss`)
 
 ## Architecture
 - **Single instance**: `QLockFile` at `%TEMP%/<user>_Stickers Manager.lock` (`main.cpp:44`)
 - **Config** (`[EXE_DIR]/.stickersmanager/`, relative to exe):
   - `config.json`: `{"default":{ui,behavior,window,performance},"libraries":[{id,path,hotkey,enabled,settings:{}}]}` — no version field; `id` is the **order marker** (0..n-1, contiguous): `getLibraries()` sorts by id (`configmanager.cpp:145-167`), missing ids (legacy) get array position, drag-reorder in the Libraries tab renumbers ids; `enabled` = **hotkey switch only** ("Enable Hotkey" checkbox) — does NOT affect window/tray/menu/double-click target/storage stats, only global-hotkey registration and hotkey-conflict computation
   - `settings.json`: `doubleClickTarget` (default `"settings"`; `"first-library"`/library id string; legacy dirName/path values still matched as fallback, `main.cpp:242-259`), `searchDelayMs` (300), `thumbnailCacheSize` (200), `checkForUpdatesOnStartup` (true), `startWithWindows` (false)
-  - `recent_<md5(libraryPath)>.json`: per-library **recently-used** list `{"entries":[{path,time}]}` (storage capped 100, newest first, stale files pruned on load); written by `RecentUsageStore` (`src/core/recentusage.cpp`) on double-click copy; shown as the first "Recent" pseudo-category in `MainWindow::populateCategories()` — **hidden entirely when empty**, created live on first use (`onStickerDoubleClicked` → `refreshRecentButton()` returns false → repopulate); right-click on it shows a "Clear Recent Records" menu (`onCategoryContextMenuRequested`, `CustomMenu` style, `RecentUsageStore::clear()` deletes the file, then repopulate hides it); its preview icon is a clock (`setShowClock`), drawn from `:/assets/Clock - 24x24.png` tinted via `SourceIn` (`clockicon.cpp` `makeClockIcon()`); display cap = `recentLimit` (`default.ui`, default 100, per-library override) applied in `RecentUsageStore::paths()`; count label refreshed live via `MainWindow::refreshRecentButton()`
+  - `recent_<md5(libraryPath)>.json`: per-library **recently-used** list `{"entries":[{path,time}]}` (storage capped 100, newest first, stale files pruned on load); written by `RecentUsageStore` (`src/core/recentusage.cpp`) on double-click copy; shown as the first "Recent" pseudo-category in `MainWindow::populateCategories()` — **hidden entirely when empty**, created live on first use (`onStickerDoubleClicked` → `refreshRecentButton()` returns false → repopulate), and hidden entirely when disabled via `recentEnabled` (`populateCategories` gate + `showCategory("Recent")` guard + record skipped in `onStickerDoubleClicked`); right-click on it shows a "Clear Recent Records" menu (`onCategoryContextMenuRequested`, `CustomMenu` style, `RecentUsageStore::clear()` deletes the file, then repopulate hides it); its preview icon is a clock (`setShowClock`), drawn from `:/assets/Clock - 24x24.png` tinted via `SourceIn` (`clockicon.cpp` `makeClockIcon()`); display cap = `recentLimit` (`default.ui`, default 100, per-library override) applied in `RecentUsageStore::paths()`; count label refreshed live via `MainWindow::refreshRecentButton()`
 - **No auto-save** — config written on explicit `saveConfig()` / `saveSettings()` only (Settings "Save & Reload", `settingsdialog.cpp:66-67`), plus the fallback folder-picker save in `mainwindow.cpp:150` when a window has an empty path
 - **First-launch** — if no library with existing path, modal `SettingsDialog tmpDlg.exec()` (`main.cpp:197-203`) blocks before any window/tray
 - **Multi-window**: one `MainWindow` per library with non-empty path (regardless of hotkey switch); title `"Stickers Manager - <dirName>"` (`main.cpp:72`)
@@ -41,6 +41,7 @@ cd build && cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug && cmake --bu
 - `getDefaultXxx()` reads from `default{}` (set by General tab)
 - Tag toggles (4 keys in `default.behavior`, default true): `showStickerName`, `showStickerSize`, `showCategoryName`, `showCategoryCount` (General tab + per-library combos)
 - `recentLimit` (`default.ui`, default 100, per-library numeric override, 0 = not overridden): recent display cap
+- `recentEnabled` (`default.ui`, default true, per-library bool override via General/On/Off combo in the UI overrides group): master switch for the Recent feature — when off (effective), the Recent category is hidden (even with existing records), recording is skipped on double-click copy, and `showCategory("Recent")` is a no-op; records file is kept so re-enabling restores the category
 
 ## Animation (GIF)
 - Detected by extension `.gif` or `QImageReader::imageCount() > 1`
@@ -77,8 +78,8 @@ thirdparty/stb/        # stb_image.h, stb_image_resize2.h
 - **All source globbed**: new files need re-run `cmake ..` to be picked up
 - **No `.ui` files**: `AUTOUIC ON` but all UI in C++ code; `CMAKE_AUTOMOC` + `AUTORCC` also ON
 - **Style**: Fusion (`main.cpp:53-55`)
-- **Logging**: `log.hpp` writes to `log/log.log` relative to working dir, truncated on each start; `DEBUG_MODE` in `main.cpp:24` — `false` installs `messageHandler`, `true` shows `qDebug()` in console
-- **Version**: `appinfo.h:7` — `AppInfo::version()` returns `"2.6.0"`, manual bump only on release
+- **Logging**: `log.hpp` writes to `log/log.log` relative to working dir, truncated on each start; `DEBUG_MODE` (`main.cpp:24-28`) — driven by `CONSOLE` compile definition (`-DCONSOLE=ON`): `false` installs `messageHandler`, `true` shows `qDebug()` in console
+- **Version**: `appinfo.h:7` — `AppInfo::version()` returns `"2.7.0"`, manual bump only on release
 - **About page**: version comparison strips `v` prefix, parses `major.minor.patch` numerically (`UpdateChecker::compareVersions`)
 - **Header-only utils**: `static` functions in `log.hpp` / `launcher.hpp` / `fsutil.hpp` (one copy per TU). `launch()` opens paths/URLs via `QtConcurrent::run` + `QDesktopServices`; `notifyTray()` marshals tray messages from worker threads to the GUI thread (`QueuedConnection`)
 - **No tests / CI / linters**; packaging via `pkg.iss` (Inno Setup); release artifacts (`StickersManager_<ver>.exe/.7z`) at repo root are **gitignored** (`*.exe`/`*.7z`) — local only, never committed

@@ -20,6 +20,7 @@ private:
     QSpinBox *m_categoryButtonSize;
     QSpinBox *m_gridCellSize;
     QSpinBox *m_recentLimit;
+    QCheckBox *m_recentEnabled;
     QCheckBox *m_copyOnDblClick;
     QCheckBox *m_highlightOnClick;
     QCheckBox *m_animateThumbnails;
