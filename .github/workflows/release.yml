@@ -2,6 +2,11 @@ name: Release
 
 on:
   workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run: build & package, but do not create tag or GitHub Release'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -20,19 +25,23 @@ jobs:
           host: 'windows'
           target: 'desktop'
           arch: 'win64_mingw'
+          tools: 'tools_mingw1310,mingw1310_64'
           cache: 'true'
-      - name: Install MinGW toolchain
-        shell: pwsh
-        run: choco install mingw -y --no-progress
       - name: Configure
         shell: pwsh
         run: |
-          $env:Path = "$env:Qt6_DIR\bin;C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin;" + $env:Path
+          $qtRoot = Split-Path $env:Qt6_DIR
+          $mingwBin = Get-ChildItem "$qtRoot\Tools" -Directory -Filter "mingw*" | Select-Object -First 1
+          if (-not $mingwBin) { throw "MinGW toolchain not found under $qtRoot\Tools" }
+          $env:Path = "$env:Qt6_DIR\bin;$($mingwBin.FullName)\bin;" + $env:Path
           cmake -S . -B build -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DQT_PATH="$env:Qt6_DIR"
       - name: Build
         shell: pwsh
         run: |
-          $env:Path = "$env:Qt6_DIR\bin;C:\ProgramData\chocolatey\lib\mingw\tools\install\mingw64\bin;" + $env:Path
+          $qtRoot = Split-Path $env:Qt6_DIR
+          $mingwBin = Get-ChildItem "$qtRoot\Tools" -Directory -Filter "mingw*" | Select-Object -First 1
+          if (-not $mingwBin) { throw "MinGW toolchain not found under $qtRoot\Tools" }
+          $env:Path = "$env:Qt6_DIR\bin;$($mingwBin.FullName)\bin;" + $env:Path
           cmake --build build --parallel
       - name: Assemble Release directory
         shell: pwsh
@@ -90,11 +99,13 @@ jobs:
         shell: pwsh
         run: .\scripts\make_release_notes.ps1
       - name: Create git tag
+        if: ${{ !inputs.dry_run }}
         shell: pwsh
         run: |
           git tag "${{ steps.version.outputs.tag }}"
           git push origin "${{ steps.version.outputs.tag }}"
       - name: Create GitHub Release
+        if: ${{ !inputs.dry_run }}
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "${{ steps.version.outputs.tag }}" "StickersManager_${{ steps.version.outputs.version }}.exe" "StickersManager_${{ steps.version.outputs.version }}.7z" --title "${{ steps.version.outputs.tag }}" --notes-file release_notes.md
