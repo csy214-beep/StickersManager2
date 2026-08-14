@@ -24,7 +24,6 @@ public:
     void cancelAllLoads();
     void clear();
 
-    int size() const { return m_cache.size(); }
     int maxSize() const { return m_cache.maxCost(); }
     void setMaxSize(int size) { m_cache.setMaxCost(size); }
 

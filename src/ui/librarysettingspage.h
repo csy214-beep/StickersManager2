@@ -28,9 +28,14 @@ struct LibraryEditWidgets {
     QComboBox *alwaysOnTop;
     QSpinBox *gridCellSize;
     QSpinBox *categoryButtonSize;
+    QSpinBox *recentLimit;
     QComboBox *animateThumbnails;
     QComboBox *animatePreview;
     QComboBox *showFileTypeTag;
+    QComboBox *showStickerName;
+    QComboBox *showStickerSize;
+    QComboBox *showCategoryName;
+    QComboBox *showCategoryCount;
     QComboBox *copyOnDblClick;
     QComboBox *highlightOnClick;
     QWidget *overrideWidget;
@@ -55,7 +60,6 @@ private:
     ConfigManager *m_config;
     QVBoxLayout *m_listLayout;
     QVector<LibraryEditWidgets> m_libs;
-    int m_collapsedCount = 0;
 
     void buildFromConfig();
     void rebuildList();

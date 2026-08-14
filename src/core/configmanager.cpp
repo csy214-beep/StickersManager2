@@ -24,14 +24,6 @@ ConfigManager::~ConfigManager()
 {
 }
 
-bool ConfigManager::reloadFromDisk() {
-    bool ok = loadConfig();
-    if (!ok) {
-        qWarning() << "Using default configuration after reload";
-    }
-    return ok;
-}
-
 bool ConfigManager::loadConfig() {
     QFile configFile(m_configPath);
     if (!configFile.open(QIODevice::ReadOnly)) {
@@ -210,6 +202,7 @@ QJsonObject ConfigManager::getDefaultConfig() {
     ui["categoryButtonSize"] = 90;
     ui["gridCellSize"] = 120;
     ui["gridColumns"] = 3;
+    ui["recentLimit"] = 100;
     def["ui"] = ui;
 
     QJsonObject behavior;
@@ -218,6 +211,10 @@ QJsonObject ConfigManager::getDefaultConfig() {
     behavior["animateThumbnails"] = false;
     behavior["animatePreview"] = true;
     behavior["showFileTypeTag"] = true;
+    behavior["showStickerName"] = true;
+    behavior["showStickerSize"] = true;
+    behavior["showCategoryName"] = true;
+    behavior["showCategoryCount"] = true;
     def["behavior"] = behavior;
 
     QJsonObject performance;
@@ -255,6 +252,10 @@ int ConfigManager::getGridColumns() const {
     return defaultBlock()["ui"].toObject()["gridColumns"].toInt(3);
 }
 
+int ConfigManager::getRecentLimit() const {
+    return defaultBlock()["ui"].toObject()["recentLimit"].toInt(100);
+}
+
 int ConfigManager::getThumbnailCacheSize() const {
     return m_settings["thumbnailCacheSize"].toInt(200);
 }
@@ -273,6 +274,22 @@ bool ConfigManager::animatePreview() const {
 
 bool ConfigManager::showFileTypeTag() const {
     return defaultBlock()["behavior"].toObject()["showFileTypeTag"].toBool(true);
+}
+
+bool ConfigManager::showStickerName() const {
+    return defaultBlock()["behavior"].toObject()["showStickerName"].toBool(true);
+}
+
+bool ConfigManager::showStickerSize() const {
+    return defaultBlock()["behavior"].toObject()["showStickerSize"].toBool(true);
+}
+
+bool ConfigManager::showCategoryName() const {
+    return defaultBlock()["behavior"].toObject()["showCategoryName"].toBool(true);
+}
+
+bool ConfigManager::showCategoryCount() const {
+    return defaultBlock()["behavior"].toObject()["showCategoryCount"].toBool(true);
 }
 
 bool ConfigManager::copyOnDoubleClick() const {
@@ -329,6 +346,12 @@ int ConfigManager::getEffectiveGridColumns(const LibraryConfig &lib) const {
     return getGridColumns();
 }
 
+int ConfigManager::getEffectiveRecentLimit(const LibraryConfig &lib) const {
+    QJsonObject o = libCatSettings(lib, "ui");
+    if (o.contains("recentLimit")) return o["recentLimit"].toInt();
+    return getRecentLimit();
+}
+
 int ConfigManager::getEffectiveThumbnailCacheSize(const LibraryConfig &) const {
     return getThumbnailCacheSize();
 }
@@ -349,6 +372,30 @@ bool ConfigManager::getEffectiveShowFileTypeTag(const LibraryConfig &lib) const 
     QJsonObject o = libCatSettings(lib, "behavior");
     if (o.contains("showFileTypeTag")) return o["showFileTypeTag"].toBool();
     return showFileTypeTag();
+}
+
+bool ConfigManager::getEffectiveShowStickerName(const LibraryConfig &lib) const {
+    QJsonObject o = libCatSettings(lib, "behavior");
+    if (o.contains("showStickerName")) return o["showStickerName"].toBool();
+    return showStickerName();
+}
+
+bool ConfigManager::getEffectiveShowStickerSize(const LibraryConfig &lib) const {
+    QJsonObject o = libCatSettings(lib, "behavior");
+    if (o.contains("showStickerSize")) return o["showStickerSize"].toBool();
+    return showStickerSize();
+}
+
+bool ConfigManager::getEffectiveShowCategoryName(const LibraryConfig &lib) const {
+    QJsonObject o = libCatSettings(lib, "behavior");
+    if (o.contains("showCategoryName")) return o["showCategoryName"].toBool();
+    return showCategoryName();
+}
+
+bool ConfigManager::getEffectiveShowCategoryCount(const LibraryConfig &lib) const {
+    QJsonObject o = libCatSettings(lib, "behavior");
+    if (o.contains("showCategoryCount")) return o["showCategoryCount"].toBool();
+    return showCategoryCount();
 }
 
 bool ConfigManager::getEffectiveHighlightOnClick(const LibraryConfig &lib) const {

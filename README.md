@@ -20,6 +20,9 @@ StickersManager is a Windows sticker management tool built with C++20 and Qt 6.1
 - **Global hotkeys** — customizable shortcuts per library via Win32 hook
 - **Local folders** — subdirectories become categories
 - **Preview-file filtering** — files named `.preview*` (or containing `.preview.`) are excluded from library scanning, search, and statistics
+- **Category tags** — name (bottom-left) and sticker count (bottom-right) on category buttons; the Recent category uses a clock as its preview icon
+- **Sticker tags** — file name without extension (top-left), file size (bottom-right), and file type (bottom-left) on each cell
+- **Recently used** — a per-library "Recent" category (first in the panel, default view; hidden while empty) sorted by usage time, recorded on copy, with a clock preview icon and a configurable display limit
 - **Search** — search stickers by filename, categories by name
 - **Copy** — double-click to copy to clipboard
 - **Preview** — right-click for full-size view

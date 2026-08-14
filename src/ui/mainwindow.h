@@ -16,6 +16,7 @@
 #include "stickercell.h"
 #include "categorybutton.h"
 #include "imagepreviewdialog.h"
+#include "recentusage.h"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -43,6 +44,7 @@ private slots:
     void onSearchTextChanged(const QString &text);
     void onCategorySearchTextChanged(const QString &text);
     void onCategoryClicked();
+    void onCategoryContextMenuRequested(const QPoint &pos);
     void onStickerClicked(const QString &filePath);
     void onStickerDoubleClicked(const QString &filePath);
     void onStickerRightClicked(const QString &filePath);
@@ -63,10 +65,12 @@ private:
     void updateVisibleCells();
     void recalculateGridColumns();
     void updateCellVisibility();
+    bool refreshRecentButton();
 
     ConfigManager *m_config;
     StickerLibrary *m_library;
     ThumbnailCache *m_thumbnailCache;
+    RecentUsageStore m_recents;
     LibraryConfig m_libConfig;
 
     QWidget *m_categoryPanel = nullptr;
