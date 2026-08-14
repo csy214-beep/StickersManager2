@@ -25,7 +25,7 @@ jobs:
           host: 'windows'
           target: 'desktop'
           arch: 'win64_mingw'
-          tools: 'tools_mingw1310,mingw1310_64'
+          tools: 'tools_mingw1310,qt.tools.win64_mingw1310'
           cache: 'true'
       - name: Configure
         shell: pwsh
