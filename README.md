@@ -46,6 +46,39 @@ StickersManager/
     └── stb/             # stb_image, stb_image_resize2
 ```
 
+## Sticker Library Structure
+
+Each library is a local folder; every **immediate subdirectory becomes a category**:
+
+```
+Stickers/
+├── Cat/
+│   ├── sticker1.png
+│   └── sticker2.gif
+├── Meme/
+│   └── ...
+```
+
+- Supported image formats: `png, jpg, jpeg, gif, bmp, tiff, tif, webp, psd, hdr, tga, ico, svg, heic, heif, avif`
+- Files named `.preview*` (or containing `.preview.`) are excluded from scanning, search, and statistics
+
+## Configuration
+
+App-level settings live next to the executable (relative to `[EXE_DIR]`):
+
+```
+[EXE_DIR]/.stickersmanager/
+├── config.json     # default{} defaults + libraries[] (id, path, hotkey, enabled, settings{})
+└── settings.json   # doubleClickTarget, searchDelayMs, thumbnailCacheSize,
+                    # checkForUpdatesOnStartup, startWithWindows
+```
+
+Configuration is written only on "Save & Reload" in the Settings dialog.
+
+## Logs
+
+Diagnostics are written to `log/log.log` **relative to the working directory** (created/truncated on each start).
+
 ## Third-Party Libraries
 
 - [Qt 6.10.1](https://www.qt.io/)
