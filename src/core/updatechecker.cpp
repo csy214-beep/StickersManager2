@@ -34,7 +34,7 @@ int UpdateChecker::compareVersions(const QString &a, const QString &b) {
 }
 
 void UpdateChecker::check() {
-    QNetworkRequest request(QUrl(AppInfo::apiReleasesUrl()));
+    QNetworkRequest request{QUrl(AppInfo::apiReleasesUrl())};
     request.setRawHeader("User-Agent", "StickersManager");
 
     auto *reply = m_manager->get(request);
