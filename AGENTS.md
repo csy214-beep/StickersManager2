@@ -10,10 +10,12 @@ cd build && cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug && cmake --bu
 - `windeployqt` auto-deploy runs POST_BUILD on every build (`CMakeLists.txt:103-113`); C++20, `UNICODE`/`_UNICODE` defined
 
 ## CI / Release (`.github/workflows/release.yml`)
-- Manual `workflow_dispatch` → builds Release with **MSVC** (Qt 6.10.1 `win64_msvc2022_64` via `jurplel/install-qt-action@v4`), then packages: 7z portable + **Inno Setup** installer + release notes, auto-creates tag `vX.Y.Z`, uploads GitHub Release
+- Manual `workflow_dispatch` → builds Release with **MinGW** (Qt 6.10.1 `win64_mingw` via `jurplel/install-qt-action@v4`, toolchain via `choco install mingw`, `-G "MinGW Makefiles"` single-config), then packages: 7z portable + **Inno Setup** installer + release notes, auto-creates tag `vX.Y.Z`, uploads GitHub Release
+- MinGW Makefiles put the exe in `build/` (no `build/Release`) — build job runs an "Assemble Release directory" step (filters `CMakeCache.txt/cmake_install.cmake/Makefile/CMakeFiles`, moves the rest into `build/Release/`) so the upload path stays `build/Release`; build step prepends `$env:Qt6_DIR\bin` + mingw bin to PATH (windeployqt needs objdump)
 - Version single source = **top section of `CHANGELOG.md`** (`# Changelog — vA → vB`); parsed by `scripts/make_release_notes.ps1` (also generates `release_notes.md` with body + `### Packaging` + `**Full Changelog**` compare link; uses section date, else today)
 - Installer: `pkg.iss` (Inno Setup) compiled by ISCC with `/DMyAppVersion=X.Y.Z` — CI: `choco install innosetup` then locate ISCC.exe dynamically (PATH, then `Program Files (x86)/Inno Setup 6`, `Program Files/Inno Setup 6`, `Program Files/Inno Setup 7`); paths inside pkg.iss are **relative to the script dir** (LICENSE, README.md, `assets/st.ico`, `OutputDir=.`, sources from `release/`); output `StickersManager_<ver>.exe` at repo root; start-menu shortcut always created, desktop icon = unchecked Task
-- `pkg.iss` also used for the **local manual** flow (iscc with default `#define MyAppVersion "2.6.0"` — e.g. `D:\Program Files\Inno Setup 7\ISCC.exe /DMyAppVersion=2.6.0 pkg.iss`); CI assembles `release/` from `build/Release/` (already windeployqt-deployed, clean — `scripts/clean_release.py` not needed on CI)
+- CI payload = `build/Release` + a "Add docs to payload" step copies `README.md` + `LICENSE` into `release/` (they ship in both 7z and installer); `scripts/clean_release.py` is **not needed on CI**
+- `pkg.iss` also used for the **local manual** flow (iscc with default `#define MyAppVersion "2.6.0"` — e.g. `D:\Program Files\Inno Setup 7\ISCC.exe /DMyAppVersion=2.6.0 pkg.iss`)
 
 ## Architecture
 - **Single instance**: `QLockFile` at `%TEMP%/<user>_Stickers Manager.lock` (`main.cpp:44`)
