@@ -13,9 +13,11 @@
 #include <QMimeData>
 #include <QTimer>
 #include <QBuffer>
+#include <QFontMetrics>
 #include <QtConcurrent>
 #include "tray.h"
 #include "imageloader.h"
+#include "fsutil.hpp"
 
 StickerCell::StickerCell(const QString &filePath, int cellSize, QWidget *parent)
     : QFrame(parent)
@@ -53,6 +55,37 @@ StickerCell::StickerCell(const QString &filePath, int cellSize, QWidget *parent)
     m_tagLabel->adjustSize();
     m_tagLabel->move(7, cellSize - m_tagLabel->height() - 7);
     m_tagLabel->hide();
+
+    // 文件名标签（左上角覆盖，不含后缀）
+    m_fileNameLabel = new QLabel(fi.completeBaseName(), this);
+    m_fileNameLabel->setStyleSheet(
+        "QLabel {"
+        "  background-color: rgba(0, 0, 0, 150);"
+        "  color: #ffffff;"
+        "  padding: 1px 5px;"
+        "  font-size: 10px;"
+        "  border-radius: 3px;"
+        "}"
+    );
+    QFontMetrics nameFm(m_fileNameLabel->font());
+    m_fileNameLabel->setText(nameFm.elidedText(fi.completeBaseName(), Qt::ElideRight, cellSize - 24));
+    m_fileNameLabel->adjustSize();
+    m_fileNameLabel->move(7, 7);
+
+    // 文件大小标签（右下角覆盖）
+    m_sizeLabel = new QLabel(formatBytes(fi.size()), this);
+    m_sizeLabel->setStyleSheet(
+        "QLabel {"
+        "  background-color: rgba(0, 0, 0, 150);"
+        "  color: #ffffff;"
+        "  padding: 1px 5px;"
+        "  font-size: 10px;"
+        "  border-radius: 3px;"
+        "}"
+    );
+    m_sizeLabel->adjustSize();
+    m_sizeLabel->move(cellSize - m_sizeLabel->width() - 7,
+                      cellSize - m_sizeLabel->height() - 7);
 
     // 初始设置为占位图
     setPlaceholder();
@@ -178,6 +211,16 @@ void StickerCell::setShowTag(bool show) {
     } else {
         m_tagLabel->hide();
     }
+}
+
+void StickerCell::setShowFileName(bool show) {
+    m_showFileName = show;
+    m_fileNameLabel->setVisible(show);
+}
+
+void StickerCell::setShowFileSize(bool show) {
+    m_showFileSize = show;
+    m_sizeLabel->setVisible(show);
 }
 
 void StickerCell::clearHighlight() {

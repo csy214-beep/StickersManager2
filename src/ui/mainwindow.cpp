@@ -9,6 +9,9 @@
 #include <QScrollBar>
 #include "appinfo.h"
 #include "tray.h"
+#include "custommenu.h"
+
+static const QString kRecentCategoryName = "Recent";
 
 MainWindow::MainWindow(ConfigManager *config, const LibraryConfig &libConfig, QWidget *parent)
     : QMainWindow(parent), m_config(config), m_library(nullptr), m_thumbnailCache(nullptr),
@@ -20,6 +23,8 @@ MainWindow::MainWindow(ConfigManager *config, const LibraryConfig &libConfig, QW
             this, &MainWindow::onThumbnailLoaded);
 
     initUI();
+    m_recents.load(m_libConfig.path);
+    m_recents.setLimit(m_config->getEffectiveRecentLimit(m_libConfig));
     loadLibrary();
     m_searchTimer->setSingleShot(true);
     connect(m_searchTimer, &QTimer::timeout, this, &MainWindow::delayedSearch);
@@ -44,6 +49,7 @@ void MainWindow::applySettings() {
     QString savedCat = m_currentCategory;
 
     m_thumbnailCache->setMaxSize(m_config->getEffectiveThumbnailCacheSize(m_libConfig));
+    m_recents.setLimit(m_config->getEffectiveRecentLimit(m_libConfig));
 
     populateCategories();
     recalculateGridColumns();
@@ -148,6 +154,8 @@ void MainWindow::loadLibrary() {
         m_libConfig.path = libraryPath;
         m_config->addLibrary(m_libConfig);
         m_config->saveConfig();
+        m_recents.load(m_libConfig.path);
+        m_recents.setLimit(m_config->getEffectiveRecentLimit(m_libConfig));
     }
     if (m_library->setLibraryPath(libraryPath)) {
         populateCategories();
@@ -171,33 +179,47 @@ void MainWindow::populateCategories()
         m_categoryPanel->setMinimumWidth(buttonSize + 20);
     }
 
-    for (const QString &categoryName: categories.keys()) {
-        QVector<QString> stickers = categories[categoryName];
-        if (stickers.isEmpty()) continue;
-
-        QString firstSticker = stickers.first();
-        CategoryButton *button = new CategoryButton(categoryName, firstSticker, buttonSize);
-        button->setStickerCount(stickers.size());
+    auto addCategoryButton = [&](const QString &categoryName, const QString &firstSticker, int count, bool showClock = false) {
+        CategoryButton *button = new CategoryButton(categoryName, buttonSize);
+        button->setStickerCount(count);
+        button->setShowName(m_config->getEffectiveShowCategoryName(m_libConfig));
+        button->setShowCount(m_config->getEffectiveShowCategoryCount(m_libConfig));
+        button->setShowClock(showClock);
 
         connect(button, &CategoryButton::clicked, this, &MainWindow::onCategoryClicked);
+        connect(button, &CategoryButton::customContextMenuRequested,
+                this, &MainWindow::onCategoryContextMenuRequested);
         m_categoryLayout->addWidget(button);
         m_categoryButtons[button] = categoryName;
 
-        QPixmap cached = m_thumbnailCache->get(firstSticker);
-        if (!cached.isNull()) {
-            button->setThumbnail(cached);
+        if (!firstSticker.isEmpty()) {
+            QPixmap cached = m_thumbnailCache->get(firstSticker);
+            if (!cached.isNull()) {
+                button->setThumbnail(cached);
+            } else {
+                m_pendingCategoryButtons[firstSticker] = button;
+                m_thumbnailCache->loadThumbnailAsync(firstSticker, QSize(buttonSize, buttonSize));
+            }
         }
-        else
-        {
-            m_pendingCategoryButtons[firstSticker] = button;
-            m_thumbnailCache->loadThumbnailAsync(firstSticker, QSize(buttonSize, buttonSize));
-        }
+    };
+
+    // Recent pseudo-category first — hidden entirely when there are no usage records
+    QVector<QString> recentPaths = m_recents.paths();
+    if (!recentPaths.isEmpty()) {
+        addCategoryButton(kRecentCategoryName, QString(), recentPaths.size(), true);
+    }
+
+    for (const QString &categoryName: categories.keys()) {
+        QVector<QString> stickers = categories[categoryName];
+        if (stickers.isEmpty()) continue;
+        addCategoryButton(categoryName, stickers.first(), stickers.size());
     }
     m_categoryLayout->addStretch();
 
-    if (!categories.isEmpty()) {
+    if (!recentPaths.isEmpty())
+        showCategory(kRecentCategoryName);
+    else if (!categories.isEmpty())
         showCategory(categories.keys().first());
-    }
 }
 
 void MainWindow::showCategory(const QString &categoryName) {
@@ -205,7 +227,10 @@ void MainWindow::showCategory(const QString &categoryName) {
     m_searchInput->clear();
     m_categorySearchInput->clear();
 
-    displayStickers(m_library->getCategories().value(categoryName));
+    if (categoryName == kRecentCategoryName)
+        displayStickers(m_recents.paths());
+    else
+        displayStickers(m_library->getCategories().value(categoryName));
     QTimer::singleShot(0, this, &MainWindow::updateCellVisibility);
 }
 
@@ -281,6 +306,8 @@ void MainWindow::updateVisibleCells() {
         StickerCell *cell = new StickerCell(path, cellSize, m_stickerContainer);
         cell->setAnimateEnabled(m_config->getEffectiveAnimateThumbnails(m_libConfig));
         cell->setShowTag(m_config->getEffectiveShowFileTypeTag(m_libConfig));
+        cell->setShowFileName(m_config->getEffectiveShowStickerName(m_libConfig));
+        cell->setShowFileSize(m_config->getEffectiveShowStickerSize(m_libConfig));
         cell->setHighlightEnabled(m_config->getEffectiveHighlightOnClick(m_libConfig));
         cell->setCopyOnDoubleClick(m_config->getEffectiveCopyOnDoubleClick(m_libConfig));
         connect(cell, &StickerCell::clicked, this, &MainWindow::onStickerClicked);
@@ -373,6 +400,8 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 void MainWindow::reloadLibrary() {
     qDebug() << "Reloading library...";
     if (m_library) {
+        m_recents.load(m_libConfig.path);
+        m_recents.setLimit(m_config->getEffectiveRecentLimit(m_libConfig));
         if (m_library->scanLibrary()) {
             populateCategories();
             recalculateGridColumns();
@@ -418,6 +447,21 @@ void MainWindow::onCategoryClicked() {
     }
 }
 
+void MainWindow::onCategoryContextMenuRequested(const QPoint &pos) {
+    auto *button = qobject_cast<CategoryButton *>(sender());
+    if (!button || !m_categoryButtons.contains(button))
+        return;
+    if (m_categoryButtons[button] != kRecentCategoryName)
+        return;
+
+    CustomMenu menu(this);
+    QAction *clearAct = menu.addAction("Clear Recent Records");
+    if (menu.exec(button->mapToGlobal(pos)) == clearAct) {
+        m_recents.clear();
+        populateCategories();
+    }
+}
+
 void MainWindow::onStickerClicked(const QString &filePath) {
     for (StickerCell *cell: m_currentCells) {
         if (cell->getFilePath() != filePath) {
@@ -445,7 +489,29 @@ void MainWindow::onStickerRightClicked(const QString &filePath)
 }
 
 void MainWindow::onStickerDoubleClicked(const QString &filePath) {
+    m_recents.recordUse(filePath);
+    if (!refreshRecentButton()) {
+        // 首次使用：Recent 按钮还不存在，重建类目面板（会创建 Recent 并切为当前视图）
+        populateCategories();
+    } else if (m_currentCategory == kRecentCategoryName) {
+        displayStickers(m_recents.paths());
+    }
     hide();
+}
+
+bool MainWindow::refreshRecentButton() {
+    CategoryButton *recentBtn = nullptr;
+    for (auto it = m_categoryButtons.begin(); it != m_categoryButtons.end(); ++it) {
+        if (it.value() == kRecentCategoryName) {
+            recentBtn = it.key();
+            break;
+        }
+    }
+    if (!recentBtn)
+        return false;
+
+    recentBtn->setStickerCount(m_recents.paths().size());
+    return true;
 }
 
 void MainWindow::delayedSearch() {

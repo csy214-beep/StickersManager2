@@ -1,3 +1,18 @@
+# Changelog — v2.5.0 → v2.6.0
+
+### Added
+
+- **Category tags**: each category button shows the name (bottom-left) and sticker count (bottom-right) as overlay labels; the "Recent" category uses a clock as its preview icon (only while usage records exist)
+- **Sticker tags**: each sticker cell shows the file name without extension (top-left) and file size (bottom-right) as overlay labels; the existing file-type tag (bottom-left) is unchanged
+- **Recently used stickers**: a "Recent" pseudo-category appears first in the category panel and is the default view while there are usage records (hidden entirely when empty, created live on first use); per-library (stored in `[EXE_DIR]/.stickersmanager/recent_<md5(path)>.json`), sorted by usage time, recorded on double-click copy, stale files pruned on load; the count label refreshes live after every copy
+- New per-library overridable settings in `default.behavior` (General tab, default on): `showStickerName`, `showStickerSize`, `showCategoryName`, `showCategoryCount` — missing/empty keys fall back to the default, per the existing override system
+- New display-cap setting `default.ui.recentLimit` (default 100, General tab + per-library override, 0 = General): caps how many recent stickers are shown; storage cap stays 100
+- Right-clicking the "Recent" category shows a "Clear Recent Records" context menu item — clears the per-library records file and hides the category again
+
+### Fixes
+
+- Recent category no longer fails to appear when usage records already exist on startup (recents are now loaded before the category panel is built), and appears immediately after the very first copy
+
 # Changelog — v2.3.0 → v2.5.0 (2026.08.14)
 
 ### Changed
