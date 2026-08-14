@@ -177,6 +177,7 @@ void MainWindow::populateCategories()
 
         QString firstSticker = stickers.first();
         CategoryButton *button = new CategoryButton(categoryName, firstSticker, buttonSize);
+        button->setStickerCount(stickers.size());
 
         connect(button, &CategoryButton::clicked, this, &MainWindow::onCategoryClicked);
         m_categoryLayout->addWidget(button);

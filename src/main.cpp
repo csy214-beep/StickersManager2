@@ -35,7 +35,7 @@ static void rebuildHotkeyMapping(const QMap<QString, MainWindow *> &windows, QMa
 
 int main(int argc, char *argv[]) {
     initLogFile();
-    setLogLevel(LogLevel::Warning);
+    setLogLevel(LogLevel::Debug);
     if (!DEBUG_MODE) qInstallMessageHandler(messageHandler);
     QApplication app(argc, argv);
     app.setApplicationName("Stickers Manager");

@@ -2,6 +2,7 @@
 #include "appinfo.h"
 #include "configmanager.h"
 #include "launcher.hpp"
+#include "fsutil.hpp"
 
 #include <QLabel>
 #include <QVBoxLayout>
@@ -11,23 +12,6 @@
 #include <QDirIterator>
 #include <QCoreApplication>
 #include <QScrollArea>
-
-QString AboutPage::formatSize(qint64 bytes) {
-    if (bytes < 1024) return QString::number(bytes) + " B";
-    if (bytes < 1024 * 1024) return QString::number(bytes / 1024.0, 'f', 1) + " KB";
-    if (bytes < 1024LL * 1024 * 1024) return QString::number(bytes / (1024.0 * 1024.0), 'f', 1) + " MB";
-    return QString::number(bytes / (1024.0 * 1024.0 * 1024.0), 'f', 2) + " GB";
-}
-
-qint64 AboutPage::dirSize(const QString &path) const {
-    QDirIterator it(path, QDir::Files | QDir::NoDotAndDotDot, QDirIterator::Subdirectories);
-    qint64 total = 0;
-    while (it.hasNext()) {
-        it.next();
-        total += it.fileInfo().size();
-    }
-    return total;
-}
 
 AboutPage::AboutPage(ConfigManager *config, QWidget *parent)
     : QWidget(parent), m_config(config)
@@ -89,7 +73,7 @@ AboutPage::AboutPage(ConfigManager *config, QWidget *parent)
     auto *storageForm = new QFormLayout(storageGroup);
 
     qint64 appDirBytes = dirSize(QCoreApplication::applicationDirPath());
-    storageForm->addRow("App directory:", new QLabel(formatSize(appDirBytes), this));
+    storageForm->addRow("App directory:", new QLabel(formatBytes(appDirBytes), this));
 
     qint64 libBytes = 0;
     auto libs = m_config->getLibraries();
@@ -97,7 +81,7 @@ AboutPage::AboutPage(ConfigManager *config, QWidget *parent)
         if (lib.path.isEmpty()) continue;
         libBytes += dirSize(lib.path);
     }
-    m_storageLabel = new QLabel(formatSize(libBytes), this);
+    m_storageLabel = new QLabel(formatBytes(libBytes), this);
     storageForm->addRow("Library files:", m_storageLabel);
 
     contentLayout->addWidget(storageGroup);

@@ -13,9 +13,13 @@
 SettingsDialog::SettingsDialog(ConfigManager *config, bool keepOpenOnSave, QWidget *parent)
     : QDialog(parent), m_config(config), m_keepOpenOnSave(keepOpenOnSave)
 {
-    setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
     setWindowTitle("Settings");
     setMinimumSize(600, 500);
+
+    Qt::WindowFlags flags = windowFlags() | Qt::WindowMaximizeButtonHint;
+    if (m_config->getDefaultAlwaysOnTop())
+        flags |= Qt::WindowStaysOnTopHint;
+    setWindowFlags(flags);
 
     auto *layout = new QVBoxLayout(this);
 
@@ -61,6 +65,15 @@ void SettingsDialog::onSave() {
 
     m_config->saveConfig();
     m_config->saveSettings();
+
+    // keep the topmost state in sync with the General "Always on Top" default
+    bool aot = m_config->getDefaultAlwaysOnTop();
+    if (aot != bool(windowFlags() & Qt::WindowStaysOnTopHint)) {
+        setWindowFlag(Qt::WindowStaysOnTopHint, aot);
+        if (isVisible())
+            show();
+    }
+
     if (m_keepOpenOnSave)
         emit applied();
     else

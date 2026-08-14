@@ -11,6 +11,10 @@ class QLineEdit;
 class QCheckBox;
 class QSpinBox;
 class QComboBox;
+class QPushButton;
+class QLabel;
+class QTableWidget;
+template <typename T> class QFutureWatcher;
 class HotkeyCaptureButton;
 
 struct LibraryEditWidgets {
@@ -30,6 +34,12 @@ struct LibraryEditWidgets {
     QComboBox *copyOnDblClick;
     QComboBox *highlightOnClick;
     QWidget *overrideWidget;
+    // structure stats
+    QPushButton *statsToggle = nullptr;
+    QWidget *statsWidget = nullptr;
+    QLabel *statsLabel = nullptr;
+    QTableWidget *statsTable = nullptr;
+    QFutureWatcher<QStringList> *statsWatcher = nullptr;
 };
 
 class LibrarySettingsPage : public QWidget {

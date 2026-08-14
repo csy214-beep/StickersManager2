@@ -82,6 +82,7 @@ bool ConfigManager::loadSettings() {
         m_settings["searchDelayMs"] = 300;
         m_settings["thumbnailCacheSize"] = 200;
         m_settings["checkForUpdatesOnStartup"] = true;
+        m_settings["startWithWindows"] = false;
         return false;
     }
 
@@ -93,6 +94,7 @@ bool ConfigManager::loadSettings() {
         m_settings = QJsonObject();
         m_settings["doubleClickTarget"] = QString("settings");
         m_settings["checkForUpdatesOnStartup"] = true;
+        m_settings["startWithWindows"] = false;
         return false;
     }
 
@@ -126,6 +128,14 @@ bool ConfigManager::getCheckForUpdatesOnStartup() const {
 
 void ConfigManager::setCheckForUpdatesOnStartup(bool v) {
     m_settings["checkForUpdatesOnStartup"] = v;
+}
+
+bool ConfigManager::getStartWithWindows() const {
+    return m_settings["startWithWindows"].toBool(false);
+}
+
+void ConfigManager::setStartWithWindows(bool v) {
+    m_settings["startWithWindows"] = v;
 }
 
 QJsonObject ConfigManager::libCatSettings(const LibraryConfig &lib, const QString &category) {

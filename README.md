@@ -19,6 +19,7 @@ StickersManager is a Windows sticker management tool built with C++20 and Qt 6.1
 - **Multi-window** — one window per library
 - **Global hotkeys** — customizable shortcuts per library via Win32 hook
 - **Local folders** — subdirectories become categories
+- **Preview-file filtering** — files named `.preview*` (or containing `.preview.`) are excluded from library scanning, search, and statistics
 - **Search** — search stickers by filename, categories by name
 - **Copy** — double-click to copy to clipboard
 - **Preview** — right-click for full-size view

@@ -1,5 +1,6 @@
 #include "stickerlibrary.h"
 #include "imageloader.h"
+#include "fsutil.hpp"
 #include <QDebug>
 #include <QFileInfo>
 
@@ -41,11 +42,7 @@ bool StickerLibrary::scanLibrary() {
         QStringList imageFiles;
         QStringList files = categoryDir.entryList(QDir::Files);
         for (const QString &fileName: files) {
-            if (fileName.startsWith(".preview")) {
-                continue;
-            }
-
-            if (fileName.contains(".preview.")) {
+            if (isPreviewFile(fileName)) {
                 continue;
             }
 

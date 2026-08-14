@@ -31,7 +31,15 @@
 #include <QMouseEvent>
 #include <QApplication>
 #include <QTimer>
+#include <QFontDatabase>
+#include <QTableWidget>
+#include <QHeaderView>
+#include <QFutureWatcher>
+#include <QtConcurrent>
 #include <functional>
+
+#include "imageloader.h"
+#include "fsutil.hpp"
 
 static const QStringList BOOL_ITEMS = {"General", "On", "Off"};
 static const QStringList BOOL_KEYS = {"copyOnDoubleClick", "highlightOnClick",
@@ -67,6 +75,52 @@ static int comboToBool(const QString &s, bool def) {
     if (s == "On") return 1;
     if (s == "Off") return 0;
     return def ? -1 : -1; // -1 means "use default"
+}
+
+static QStringList computeLibraryStats(const QString &libPath)
+{
+    struct CatInfo
+    {
+        QString name;
+        int count = 0;
+        qint64 bytes = 0;
+    };
+    QVector<CatInfo> cats;
+    QDir rootDir(libPath);
+    if (!rootDir.exists())
+        return QStringList();
+
+    QStringList categoryDirs = rootDir.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    qint64 totalBytes = 0;
+    int totalStickers = 0;
+    for (const QString &categoryName : categoryDirs)
+    {
+        CatInfo ci;
+        ci.name = categoryName;
+        QDir categoryDir(libPath + "/" + categoryName);
+        const QFileInfoList files = categoryDir.entryInfoList(QDir::Files, QDir::Name);
+        for (const QFileInfo &fi : files)
+        {
+            if (isPreviewFile(fi.fileName()))
+                continue;
+            ci.bytes += fi.size();
+            if (ImageLoader::isFormatSupported(fi.absoluteFilePath()))
+                ++ci.count;
+        }
+        totalBytes += ci.bytes;
+        totalStickers += ci.count;
+        cats.append(ci);
+    }
+
+    QStringList result;
+    result.append(QString("%1 (%2 categories)\nTotal: %3 stickers, %4")
+                      .arg(rootDir.dirName())
+                      .arg(cats.size())
+                      .arg(totalStickers)
+                      .arg(formatBytes(totalBytes)));
+    for (const CatInfo &ci : cats)
+        result.append(QString("%1\t%2\t%3").arg(ci.name).arg(ci.count).arg(formatBytes(ci.bytes)));
+    return result;
 }
 
 static const char *kLibraryDragMime = "application/x-stickersmanager-library";
@@ -535,6 +589,75 @@ void LibrarySettingsPage::rebuildList() {
         cardLayout->addLayout(hkRow);
         cardLayout->addWidget(overrideToggle);
         cardLayout->addWidget(overrideWidget);
+
+        // Statistic stats toggle
+        auto *statsToggle = new QPushButton("Show Statistic", card);
+        statsToggle->setCheckable(true);
+        statsToggle->setChecked(false);
+        auto *statsWidget = new QWidget(card);
+        statsWidget->setVisible(false);
+        auto *statsLayout = new QVBoxLayout(statsWidget);
+        statsLayout->setContentsMargins(0, 0, 0, 0);
+        auto *statsLabel = new QLabel(statsWidget);
+        statsLabel->setWordWrap(true);
+        statsLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+        statsLabel->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
+        statsLayout->addWidget(statsLabel);
+        auto *statsTable = new QTableWidget(statsWidget);
+        statsTable->setColumnCount(3);
+        statsTable->setHorizontalHeaderLabels({"Category", "Stickers", "Size"});
+        statsTable->horizontalHeader()->setDefaultAlignment(Qt::AlignCenter);
+        statsTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+        statsTable->verticalHeader()->setVisible(false);
+        statsTable->setEditTriggers(QAbstractItemView::NoEditTriggers);
+        statsTable->setSelectionMode(QAbstractItemView::NoSelection);
+        statsTable->setAlternatingRowColors(true);
+        statsTable->setVisible(false);
+        statsLayout->addWidget(statsTable);
+        auto *statsWatcher = new QFutureWatcher<QStringList>(card);
+        connect(statsWatcher, &QFutureWatcher<QStringList>::finished, statsToggle, [statsToggle, statsLabel, statsTable, statsWatcher]()
+                {
+            if (!statsToggle->isChecked())
+                return;
+            QStringList data = statsWatcher->result();
+            if (data.isEmpty()) {
+                statsLabel->setText("No categories found");
+                statsTable->setVisible(false);
+                return;
+            }
+            statsLabel->setText(data.first());
+            bool hasRows = data.size() > 1;
+            statsTable->setVisible(hasRows);
+            statsTable->setRowCount(hasRows ? data.size() - 1 : 0);
+            for (int r = 0; r < data.size() - 1; ++r) {
+                const QStringList parts = data[r + 1].split('\t');
+                for (int c = 0; c < 3; ++c) {
+                    auto *item = new QTableWidgetItem(parts.value(c));
+                    item->setTextAlignment(Qt::AlignCenter);
+                    statsTable->setItem(r, c, item);
+                }
+            } });
+        connect(statsToggle, &QPushButton::toggled, this, [this, pathEdit, statsWidget, statsToggle, statsWatcher](bool checked)
+                {
+            statsWidget->setVisible(checked);
+            if (!checked || statsWatcher->isRunning())
+                return;
+            QString path = pathEdit->text().trimmed();
+            if (path.isEmpty() || !QDir(path).exists()) {
+                QMessageBox::warning(this, "Library Structure",
+                    "Please set a valid library path first.");
+                statsToggle->setChecked(false);
+                return;
+            }
+            statsWatcher->setFuture(QtConcurrent::run([path]() { return computeLibraryStats(path); })); });
+        cardLayout->addWidget(statsToggle);
+        cardLayout->addWidget(statsWidget);
+
+        w.statsToggle = statsToggle;
+        w.statsWidget = statsWidget;
+        w.statsLabel = statsLabel;
+        w.statsTable = statsTable;
+        w.statsWatcher = statsWatcher;
 
         connect(hotkeyBtn, &HotkeyCaptureButton::hotkeyChanged, this, &LibrarySettingsPage::validateAllHotkeys);
         connect(enabledCheck, &QCheckBox::toggled, this, &LibrarySettingsPage::validateAllHotkeys);

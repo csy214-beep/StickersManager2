@@ -11,9 +11,6 @@ class AboutPage : public QWidget {
 public:
     explicit AboutPage(ConfigManager *config, QWidget *parent = nullptr);
 private:
-    static QString formatSize(qint64 bytes);
-    qint64 dirSize(const QString &path) const;
-
     ConfigManager *m_config;
     QLabel *m_storageLabel;
 };

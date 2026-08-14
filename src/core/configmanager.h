@@ -55,6 +55,9 @@ public:
     bool getCheckForUpdatesOnStartup() const;
     void setCheckForUpdatesOnStartup(bool v);
 
+    bool getStartWithWindows() const;
+    void setStartWithWindows(bool v);
+
     // General defaults
     QSize getWindowSize() const;
     QPoint getWindowPosition() const;

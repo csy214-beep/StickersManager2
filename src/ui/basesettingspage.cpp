@@ -16,6 +16,65 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QMessageBox>
+#include <QCoreApplication>
+#include <QFile>
+#include <QDebug>
+#ifdef Q_OS_WIN
+#include <windows.h>
+#include <shlobj.h>
+#endif
+
+namespace {
+QString windowsStartupFolder()
+{
+#ifdef Q_OS_WIN
+    PWSTR path = nullptr;
+    if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_Startup, KF_FLAG_DEFAULT, nullptr, &path))) {
+        QString result = QString::fromWCharArray(path);
+        CoTaskMemFree(path);
+        return result;
+    }
+#endif
+    return QString();
+}
+
+QString startupShortcutPath()
+{
+    QString dir = windowsStartupFolder();
+    return dir.isEmpty() ? QString() : dir + "/StickersManager.lnk";
+}
+
+void applyStartWithWindows(bool enable)
+{
+    QString linkPath = startupShortcutPath();
+    if (linkPath.isEmpty()) {
+        qDebug() << "Startup: could not locate the Windows Startup folder";
+        return;
+    }
+    if (enable) {
+        if (QFile::exists(linkPath)) {
+            qDebug() << "Startup: shortcut already exists:" << linkPath;
+            return;
+        }
+        bool ok = QFile::link(QCoreApplication::applicationFilePath(), linkPath);
+        if (ok)
+            qDebug() << "Startup: shortcut created:" << linkPath;
+        else
+            qDebug() << "Startup: failed to create shortcut:" << linkPath
+                     << "target:" << QCoreApplication::applicationFilePath();
+    } else {
+        if (!QFile::exists(linkPath)) {
+            qDebug() << "Startup: shortcut not present, nothing to remove:" << linkPath;
+            return;
+        }
+        bool ok = QFile::remove(linkPath);
+        if (ok)
+            qDebug() << "Startup: shortcut removed:" << linkPath;
+        else
+            qDebug() << "Startup: failed to remove shortcut:" << linkPath;
+    }
+}
+}
 
 BaseSettingsPage::BaseSettingsPage(ConfigManager *config, QWidget *parent)
     : QWidget(parent), m_config(config)
@@ -53,6 +112,15 @@ BaseSettingsPage::BaseSettingsPage(ConfigManager *config, QWidget *parent)
     perfForm->addRow("Search Delay:", m_searchDelayMs);
     perfForm->addRow("Thumbnail Cache Size:", m_thumbnailCacheSize);
     contentLayout->addWidget(perfGroup);
+
+    // --- Startup ---
+    auto *startupGroup = new QGroupBox("Startup");
+    auto *startupForm = new QFormLayout(startupGroup);
+    m_startWithWindows = new QCheckBox(this);
+    m_startWithWindows->setChecked(config->getStartWithWindows());
+    m_startWithWindows->setToolTip("Adds a shortcut to the Windows Startup folder.");
+    startupForm->addRow("Start with Windows:", m_startWithWindows);
+    contentLayout->addWidget(startupGroup);
 
     // --- Update ---
     auto *updateGroup = new QGroupBox("Update");
@@ -197,4 +265,8 @@ void BaseSettingsPage::applyToConfig() {
     m_config->setSearchDelayMs(m_searchDelayMs->value());
     m_config->setThumbnailCacheSize(m_thumbnailCacheSize->value());
     m_config->setCheckForUpdatesOnStartup(m_checkOnStartup->isChecked());
+    bool nextStartup = m_startWithWindows->isChecked();
+    if (nextStartup != m_config->getStartWithWindows())
+        applyStartWithWindows(nextStartup);
+    m_config->setStartWithWindows(nextStartup);
 }

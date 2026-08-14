@@ -40,6 +40,11 @@ CategoryButton::CategoryButton(const QString &categoryName,
         .arg(hl.lighter(185).name()));
 }
 
+void CategoryButton::setStickerCount(int count)
+{
+    setToolTip(m_categoryName + QString(" (%1)").arg(count));
+}
+
 void CategoryButton::setThumbnail(const QPixmap &pixmap)
 {
     if (!pixmap.isNull())

@@ -15,6 +15,7 @@ public:
                             QWidget *parent = nullptr);
 
     void setThumbnail(const QPixmap &pixmap);
+    void setStickerCount(int count);
 
     QString getCategoryName() const { return m_categoryName; }
 

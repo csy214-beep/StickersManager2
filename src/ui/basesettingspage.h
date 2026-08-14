@@ -25,6 +25,7 @@ private:
     QSpinBox *m_searchDelayMs;
     QSpinBox *m_thumbnailCacheSize;
     QCheckBox *m_checkOnStartup;
+    QCheckBox *m_startWithWindows;
     QLabel *m_checkStatus;
     QPushButton *m_checkForUpdatesBtn;
     void populateTargets();
