@@ -2,8 +2,11 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 ; Non-commercial use only
 
+#ifndef MyAppVersion
+  #define MyAppVersion "2.6.0"
+#endif
+
 #define MyAppName "StickersManager"
-#define MyAppVersion "2.6.0"
 #define MyAppPublisher "SY Cheng"
 #define MyAppURL "https://github.com/igugyj/StickersManager2"
 #define MyAppExeName "StickersManager.exe"
@@ -33,14 +36,14 @@ ArchitecturesInstallIn64BitMode=x64compatible
 ;SetupArchitecture=x64
 DefaultGroupName={#MyAppName}
 AllowNoIcons=yes
-LicenseFile=D:\programing\Cpp\StickersManager\LICENSE
-InfoBeforeFile=D:\programing\Cpp\StickersManager\README.md
+LicenseFile=LICENSE
+InfoBeforeFile=README.md
 ; Uncomment the following line to run in non administrative install mode (install for current user only).
 ;PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-OutputDir=D:\programing\Cpp\StickersManager
-OutputBaseFilename=StickersManager_2.6.0
-SetupIconFile=D:\programing\Cpp\StickersManager\assets\st.ico
+OutputDir=.
+OutputBaseFilename=StickersManager_{#MyAppVersion}
+SetupIconFile=assets\st.ico
 SolidCompression=yes
 WizardStyle=modern dynamic windows11
 
@@ -52,12 +55,12 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 ; 复制主程序（单独处理，可附加额外标志）
-Source: "D:\programing\Cpp\StickersManager\release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "release\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 
 ; 复制 release 下所有其他文件和子文件夹（递归）
-Source: "D:\programing\Cpp\StickersManager\release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
+Source: "release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs
 ; 如果不想重复复制主程序（上面已复制过），可以排除它：
-Source: "D:\programing\Cpp\StickersManager\release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs; Excludes: "{#MyAppExeName}"
+Source: "release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs; Excludes: "{#MyAppExeName}"
 
 [Icons]
 Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
