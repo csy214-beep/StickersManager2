@@ -92,9 +92,6 @@ BaseSettingsPage::BaseSettingsPage(ConfigManager *config, QWidget *parent)
 
     m_doubleClickTarget = new QComboBox(this);
     populateTargets();
-    connect(m_doubleClickTarget, &QComboBox::currentIndexChanged, this, [this](int) {
-        // update in memory on change, save is handled by dialog's onSave
-    });
 
     trayForm->addRow("Double-click action:", m_doubleClickTarget);
     contentLayout->addWidget(trayGroup);

@@ -18,6 +18,29 @@
 #include "imagepreviewdialog.h"
 #include "recentusage.h"
 
+// Per-library effective settings, cached once per (config, lib) change so scroll
+// hot paths don't re-resolve QJsonObject lookups for every cell.
+struct EffectiveSettings {
+    QSize windowSize;
+    QPoint windowPos;
+    bool alwaysOnTop = false;
+    int categoryButtonSize = 90;
+    int gridCellSize = 120;
+    int gridColumns = 3;
+    int recentLimit = 100;
+    bool recentEnabled = true;
+    int thumbnailCacheSize = 200;
+    bool animateThumbnails = false;
+    bool animatePreview = true;
+    bool showFileTypeTag = true;
+    bool showStickerName = true;
+    bool showStickerSize = true;
+    bool showCategoryName = true;
+    bool showCategoryCount = true;
+    bool highlightOnClick = true;
+    bool copyOnDoubleClick = true;
+};
+
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
@@ -54,6 +77,7 @@ private slots:
 
 private:
     void initUI();
+    void refreshEffectiveSettings();
     QWidget *createCategoryPanel();
     QWidget *createStickerPanel();
     void loadLibrary();
@@ -72,6 +96,7 @@ private:
     ThumbnailCache *m_thumbnailCache;
     RecentUsageStore m_recents;
     LibraryConfig m_libConfig;
+    EffectiveSettings m_eff;
 
     QWidget *m_categoryPanel = nullptr;
     QScrollArea *m_categoryScroll;

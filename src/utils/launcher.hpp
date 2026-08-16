@@ -27,7 +27,7 @@ static void notifyTray(const QString &title, const QString &msg, QSystemTrayIcon
     }, Qt::QueuedConnection);
 }
 
-static QFuture<void> launchByPathAsync(const QString &path) {
+static QFuture<void> launch(const QString &path) {
     qDebug() << "launching: " << path;
     return QtConcurrent::run([path]() -> bool {
         try {
@@ -77,9 +77,4 @@ static QFuture<void> launchByPathAsync(const QString &path) {
             return false;
         }
     });
-}
-
-// 同步版本
-static void launch(const QString &path) {
-    launchByPathAsync(path);
 }
