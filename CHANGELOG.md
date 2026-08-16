@@ -1,4 +1,12 @@
-# Changelog — v2.6.0 → v2.7.0
+# Unreleased
+
+### Changed
+
+- ConfigManager boilerplate deduplicated (no behavior change): all default/effective getters collapse to one-liners over new `defVal`/`effVal` helpers; every default value is now single-sourced in `hardDefaults()`, and the loaded config is recursively merged against it, so partial or type-corrupted `default` blocks still resolve correctly without touching the file on disk; `loadSettings()` failure branches share one `defaultSettings()` table
+- Settings UI helpers consolidated into `src/ui/settingswidgets.h` (spin boxes, General/On/Off bool combos, the "Animate Thumbnails" info button) and shared by the General and Libraries tabs
+- Library scanning and the per-library structure statistics now share one walker `fsutil::forEachStickerFile` (non-recursive, `.preview` files skipped); hotkey-conflict checks in the Libraries tab share `LibrarySettingsPage::hotkeyInUse`
+
+# Changelog — v2.6.0 → v2.7.0 (2026.08.14)
 
 ### Added
 

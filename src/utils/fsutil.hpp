@@ -1,7 +1,9 @@
 #pragma once
+#include <QDir>
 #include <QString>
 #include <QDirIterator>
 #include <QFileInfo>
+#include <QStringList>
 
 // 字节数 → 可读字符串 (B/KB/MB/GB)
 static QString formatBytes(qint64 bytes) {
@@ -25,4 +27,19 @@ static qint64 dirSize(const QString &path) {
 // 预览/缓存辅助文件（.preview*）—— 扫描时跳过
 static bool isPreviewFile(const QString &fileName) {
     return fileName.startsWith(".preview") || fileName.contains(".preview.");
+}
+
+// 遍历库内 sticker 文件（非递归，跳过 .preview 文件），
+// 按目录顺序回调 (categoryName, QFileInfo)。
+template <typename Fn>
+static void forEachStickerFile(const QString &libPath, Fn &&fn) {
+    QDir root(libPath);
+    const QStringList categoryDirs = root.entryList(QDir::Dirs | QDir::NoDotAndDotDot);
+    for (const QString &categoryName : categoryDirs) {
+        QDir categoryDir(libPath + "/" + categoryName);
+        const auto files = categoryDir.entryInfoList(QDir::Files);
+        for (const QFileInfo &fi : files)
+            if (!isPreviewFile(fi.fileName()))
+                fn(categoryName, fi);
+    }
 }
