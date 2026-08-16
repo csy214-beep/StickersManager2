@@ -1,4 +1,4 @@
-# Unreleased
+# Changelog — v2.7.0 → v2.7.1
 
 ### Changed
 
