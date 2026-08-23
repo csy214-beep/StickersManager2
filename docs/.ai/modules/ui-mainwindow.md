@@ -12,15 +12,20 @@
 | `src/ui/mainwindow.cpp` | initUI、populateCategories、updateVisibleCells、搜索、事件 |
 | `src/ui/stickercell.h/.cpp` | 贴纸单元格：缩略图 + 名称/大小/类型标签 + GIF 生命周期 |
 | `src/ui/categorybutton.h/.cpp` | 分类按钮：名称/计数 + 可选时钟图标 |
+| `src/core/highlighmanager.h` | HighlightManager：路径驱动高亮，单一状态源 |
 
 ## 数据流
 
 ```
 m_config + LibraryConfig → 构造 → loadLibrary()（StickerLibrary 扫描）→ populateCategories()
-显示分类 → displayStickers → relayoutGrid → updateVisibleCells（只建视口内 StickerCell）
+显示分类 → displayStickers → relayoutGrid → updateVisibleCells（只建视口内 StickerCell）→ refresh()
 滚动 → recalculateGridColumns → updateCellVisibility → setInViewport（GIF 装卸）
 搜索 → onSearchTextChanged → delayedSearch（QTimer）→ performSearch → displayStickers
 双击 → onStickerDoubleClicked → 复制 + RecentUsageStore::add
+左键 → onStickerClicked → m_highlightManager.setHighlightedPath(path)
+右键 → onStickerRightClicked → setHighlightedPath + ImagePreviewDialog(filePath, animatePreview, siblings)
+预览切换 → currentFileChanged → onPreviewFileChanged → setHighlightedPath + 滚动到目标 cell
+关闭预览 → onPreviewClosed → m_highlightManager.clearHighlight()
 ```
 
 ## 依赖关系
@@ -34,6 +39,15 @@ m_config + LibraryConfig → 构造 → loadLibrary()（StickerLibrary 扫描）
 - 可见性由 showWindow()/hide() 控制；closeEvent 与 resizeEvent 回写窗口几何
 - Recent 伪分类：空隐藏、首用现场创建、右键清空（见 core-recent）
 - 窗口标题由 main.cpp 设 `"Stickers Manager - <dirName>"`
+- **高亮管理**：HighlightManager 路径驱动，单一状态源 `m_highlightedPath`
+  - `setHighlightedPath(path)` 设置路径并 refresh 所有 cell
+  - `clearHighlight()` 清空路径并 refresh
+  - `refresh()` 遍历 `m_cellMap`，路径匹配 → `setHighlighted(true)`，否则 `setHighlighted(false)`
+  - 调用时机：左键点击、右键打开预览、预览切换上下张、updateVisibleCells 新建 cell 后
+  - `onPreviewFileChanged` 先按索引滚动到目标行，再设置高亮路径（解决虚拟滚动 cell 不在 map 的问题）
+  - 关闭预览时调用 `clearHighlight()`
+- **高亮样式**：`StickerCell::setHighlighted` 用 `QApplication::palette().color(QPalette::Highlight)` 取色（非 palette()，避免不一致）
+- `mousePressEvent` 不做高亮，仅发射信号
 
 ## 变更记录索引
 

@@ -14,7 +14,7 @@ static const QString kRecentCategoryName = "Recent";
 
 MainWindow::MainWindow(ConfigManager *config, const LibraryConfig &libConfig, QWidget *parent)
     : QMainWindow(parent), m_config(config), m_library(nullptr), m_thumbnailCache(nullptr),
-      m_searchTimer(new QTimer(this)), m_libConfig(libConfig) {
+      m_searchTimer(new QTimer(this)), m_libConfig(libConfig), m_highlightManager(m_cellMap) {
     refreshEffectiveSettings();
     m_thumbnailCache = new ThumbnailCache(m_eff.thumbnailCacheSize, this);
     m_library = new StickerLibrary(this);
@@ -367,6 +367,7 @@ void MainWindow::updateVisibleCells() {
             ++it;
         }
     }
+    m_highlightManager.refresh();
 }
 
 void MainWindow::onThumbnailLoaded(const QString &filePath, const QPixmap &pixmap)
@@ -487,29 +488,45 @@ void MainWindow::onCategoryContextMenuRequested(const QPoint &pos) {
 }
 
 void MainWindow::onStickerClicked(const QString &filePath) {
-    for (StickerCell *cell: m_currentCells) {
-        if (cell->getFilePath() != filePath) {
-            cell->clearHighlight();
-        }
-    }
+    m_highlightManager.setHighlightedPath(m_eff.highlightOnClick ? filePath : QString());
 }
 
-void MainWindow::onStickerRightClicked(const QString &filePath)
-{
-    for (StickerCell *cell: m_currentCells) {
-        if (cell->getFilePath() != filePath) {
-            cell->clearHighlight();
-        }
-    }
-
+void MainWindow::onStickerRightClicked(const QString &filePath) {
+    m_highlightManager.setHighlightedPath(m_eff.highlightOnClick ? filePath : QString());
     if (m_previewDlg) {
         m_previewDlg->accept();
         m_previewDlg = nullptr;
     } else {
-        m_previewDlg = new ImagePreviewDialog(filePath, m_eff.animatePreview, this);
-        connect(m_previewDlg, &ImagePreviewDialog::finished, this, [this]() { m_previewDlg = nullptr; });
+        QString category = QFileInfo(filePath).dir().dirName();
+        QVector<QString> siblings = m_library->getCategories().value(category);
+        m_previewDlg = new ImagePreviewDialog(filePath, m_eff.animatePreview, siblings, this);
+        connect(m_previewDlg, &ImagePreviewDialog::finished,
+                this, &MainWindow::onPreviewClosed);
+        connect(m_previewDlg, &ImagePreviewDialog::currentFileChanged,
+                this, &MainWindow::onPreviewFileChanged);
         m_previewDlg->show();
     }
+}
+
+void MainWindow::onPreviewFileChanged(const QString &filePath) {
+    qDebug() << "[PREVIEW] onPreviewFileChanged:" << filePath << "highlightOnClick:" << m_eff.highlightOnClick;
+    int idx = m_currentStickers.indexOf(filePath);
+    if (idx >= 0) {
+        int cols = m_gridColumns;
+        int cellSize = m_eff.gridCellSize;
+        int step = cellSize + m_gridSpacing;
+        int row = idx / cols;
+        int targetY = 5 + row * step;
+        qDebug() << "[PREVIEW] scroll to row" << row << "targetY" << targetY;
+        m_stickerScroll->verticalScrollBar()->setValue(targetY);
+        updateVisibleCells();
+    }
+    m_highlightManager.setHighlightedPath(m_eff.highlightOnClick ? filePath : QString());
+}
+
+void MainWindow::onPreviewClosed() {
+    m_previewDlg = nullptr;
+    m_highlightManager.clearHighlight();
 }
 
 void MainWindow::onStickerDoubleClicked(const QString &filePath) {

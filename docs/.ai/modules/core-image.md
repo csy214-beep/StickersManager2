@@ -32,6 +32,11 @@ GIF：滚入 → loadAnimation（QMovie+QBuffer+CacheNone，buffer 以 movie 为
 - GIF 判定：扩展名 `.gif` 或 `QImageReader::imageCount() > 1`
 - QBuffer 必须 outlive movie：设为 movie parent
 - 动画开关：`animateThumbnails`（网格）/ `animatePreview`（预览）两个独立设置
+- ImagePreviewDialog 双栏布局：顶部信息栏（文件名/格式/尺寸/大小/日期/类目）、中部图片+左右hover箭头
+- 关闭规则：ESC + 右键；左键无效果（子控件自行处理）；Enter/Space 不再关闭；关闭时清除高亮
+- 左右导航箭头默认隐藏，鼠标进入图片区左右10%区域时显示对应按钮（QApplication 级 eventFilter）
+- GIF 播放状态由 animatePreview 设置控制，无手动切换按钮
+- 预览切换上下张时高亮跟随由 HighlightManager 统一管理（currentFileChanged 信号）
 
 ## 变更记录索引
 

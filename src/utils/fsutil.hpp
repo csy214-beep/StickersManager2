@@ -4,6 +4,7 @@
 #include <QDirIterator>
 #include <QFileInfo>
 #include <QStringList>
+#include <QImageReader>
 
 // 字节数 → 可读字符串 (B/KB/MB/GB)
 static QString formatBytes(qint64 bytes) {
@@ -11,6 +12,13 @@ static QString formatBytes(qint64 bytes) {
     if (bytes < 1024 * 1024) return QString::number(bytes / 1024.0, 'f', 1) + " KB";
     if (bytes < 1024LL * 1024 * 1024) return QString::number(bytes / (1024.0 * 1024.0), 'f', 1) + " MB";
     return QString::number(bytes / (1024.0 * 1024.0 * 1024.0), 'f', 2) + " GB";
+}
+
+// 文件格式字符串（QImageReader::format 优先，兜底扩展名）
+static QString formatFileType(const QString &filePath) {
+    QImageReader reader(filePath);
+    QByteArray fmt = reader.format();
+    return fmt.isEmpty() ? QFileInfo(filePath).suffix().toUpper() : QString(fmt).toUpper();
 }
 
 // 目录递归大小（字节）

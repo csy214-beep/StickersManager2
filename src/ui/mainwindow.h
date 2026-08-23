@@ -17,6 +17,7 @@
 #include "categorybutton.h"
 #include "imagepreviewdialog.h"
 #include "recentusage.h"
+#include "highlighmanager.h"
 
 // Per-library effective settings, cached once per (config, lib) change so scroll
 // hot paths don't re-resolve QJsonObject lookups for every cell.
@@ -74,6 +75,8 @@ private slots:
     void delayedSearch();
     void onThumbnailLoaded(const QString &filePath, const QPixmap &pixmap);
     void handleThumbnailLoaded(const QString &filePath, const QPixmap &pixmap);
+    void onPreviewFileChanged(const QString &filePath);
+    void onPreviewClosed();
 
 private:
     void initUI();
@@ -118,6 +121,7 @@ private:
     QMap<QString, CategoryButton *> m_pendingCategoryButtons;
     QMap<QString, StickerCell *> m_cellMap;
     QPointer<ImagePreviewDialog> m_previewDlg;
+    HighlightManager m_highlightManager;
 };
 
 #endif // MAINWINDOW_H

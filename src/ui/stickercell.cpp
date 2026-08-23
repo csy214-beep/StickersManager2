@@ -51,7 +51,7 @@ StickerCell::StickerCell(const QString &filePath, int cellSize, QWidget *parent)
 
     // 文件类型标签（左下角覆盖）
     QFileInfo fi(m_filePath);
-    m_tagLabel = new QLabel(fi.suffix().toUpper(), this);
+    m_tagLabel = new QLabel(formatFileType(m_filePath), this);
     m_tagLabel->setStyleSheet(QLatin1String(kOverlayLabelStyle));
     m_tagLabel->adjustSize();
     m_tagLabel->move(7, cellSize - m_tagLabel->height() - 7);
@@ -208,28 +208,31 @@ void StickerCell::setShowFileSize(bool show) {
     m_sizeLabel->setVisible(show);
 }
 
+void StickerCell::setHighlighted(bool on) {
+    if (m_isHighlighted == on) return;
+    m_isHighlighted = on;
+    if (on) {
+        QColor hl = QApplication::palette().color(QPalette::Highlight);
+        QString ss = QString("QFrame { background-color: %1; border: 2px solid %2; }")
+                          .arg(hl.lighter(180).name()).arg(hl.name());
+        qDebug() << "[CELL] setHighlighted ON:" << m_filePath << "bg=" << hl.lighter(180).name() << "border=" << hl.name() << "ss=" << ss;
+        setStyleSheet(ss);
+    } else {
+        qDebug() << "[CELL] setHighlighted OFF:" << m_filePath;
+        setStyleSheet(QString());
+    }
+    update();
+}
+
 void StickerCell::clearHighlight() {
-    m_isHighlighted = false;
-    setStyleSheet(QString());
+    setHighlighted(false);
 }
 
 void StickerCell::mousePressEvent(QMouseEvent *event) {
-    if (m_highlightEnabled) {
-        m_isHighlighted = true;
-        QColor hl = palette().color(QPalette::Highlight);
-        setStyleSheet(QString("QFrame { background-color: %1; border: 2px solid %2; }")
-                          .arg(hl.lighter(180).name())
-                          .arg(hl.name()));
-    }
-
     if (event->button() == Qt::RightButton)
-    {
         emit rightClicked(m_filePath);
-    }
     else
-    {
         emit clicked(m_filePath);
-    }
 }
 
 void StickerCell::mouseDoubleClickEvent(QMouseEvent *event) {

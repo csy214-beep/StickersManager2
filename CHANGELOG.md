@@ -1,13 +1,22 @@
-# Changelog — v2.7.0 → v2.7.1
+# Changelog — v2.7.0 → v2.8.0
+
+### Added
+
+- `HighlightManager` (path-driven highlight, replaces raw `StickerCell*` pointer)
 
 ### Changed
 
-- ConfigManager boilerplate deduplicated (no behavior change): all default/effective getters collapse to one-liners over new `defVal`/`effVal` helpers; every default value is now single-sourced in `hardDefaults()`, and the loaded config is recursively merged against it, so partial or type-corrupted `default` blocks still resolve correctly without touching the file on disk; `loadSettings()` failure branches share one `defaultSettings()` table
-- Settings UI helpers consolidated into `src/ui/settingswidgets.h` (spin boxes, General/On/Off bool combos, the "Animate Thumbnails" info button) and shared by the General and Libraries tabs
-- Library scanning and the per-library structure statistics now share one walker `fsutil::forEachStickerFile` (non-recursive, `.preview` files skipped); hotkey-conflict checks in the Libraries tab share `LibrarySettingsPage::hotkeyInUse`
-- Thumbnail load failures are no longer silent: a missing/deleted/corrupt image now shows a "Load Failed" placeholder in the grid instead of leaving the cell stuck on the loading placeholder (`AsyncThumbnailLoader` always reports its result and shares one failure image)
-- MainWindow caches the per-library effective settings in `EffectiveSettings` (refreshed on construction, settings apply, and library-config change), removing repeated `QJsonObject` lookups from the scroll hot path
-- Dead code removed: `ThumbnailCache::loadThumbnailsAsync` / `AsyncThumbnailLoader::loadThumbnails`, a no-op `connect` in the Base tab, the `launchByPathAsync` wrapper (`launch` is the single entry), and a duplicate window title (now set once in `main.cpp`); sticker overlay-label styles share one constant, cache/format lookups simplified, and the image-format/animation caches are capped at 4096 entries so the tray-long-running process doesn't grow unbounded
+- ConfigManager boilerplate deduplicated; all defaults single-sourced in `hardDefaults()`
+- Settings UI helpers consolidated into `src/ui/settingswidgets.h`
+- Library scanning shares one walker `fsutil::forEachStickerFile`
+- Thumbnail load failures show "Load Failed" placeholder instead of stuck loading
+- MainWindow caches effective settings in `EffectiveSettings`
+- Dead code removed; image-format/animation caches capped at 4096
+- Highlight unified: left/right-click and preview nav all route through `HighlightManager`
+- `StickerCell::mousePressEvent` only emits signals; MainWindow owns highlight state
+- `StickerCell::setHighlighted` uses `QApplication::palette()` for consistent color
+- Preview dialog simplified to two-zone layout; bottom action bar removed
+- Preview hover uses `QApplication` eventFilter; `onPreviewFileChanged` scrolls by index
 
 # Changelog — v2.6.0 → v2.7.0 (2026.08.14)
 
